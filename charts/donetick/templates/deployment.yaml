@@ -18,25 +18,27 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/donetick-core"]
+          command: ["/donetick"]
           ports:
             - name: http
-              containerPort: 8000
+              containerPort: 2021
               protocol: TCP
-          envFrom:
-            - configMapRef:
-                name: {{ include "donetick.fullname" . }}-config
           env:
           {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
           {{- end }}
           volumeMounts:
+            - name: config
+              mountPath: /config          
             - name: data
-              mountPath: /usr/src/app/data
+              mountPath: /donetick-data
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
+        - name: config
+          configMap:
+            name: {{ include "donetick.fullname" . }}-configmap
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "donetick.fullname" . }}-data
