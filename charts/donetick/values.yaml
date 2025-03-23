@@ -46,13 +46,13 @@ ingress:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
   hosts:
-    - host: donetick.tomik.lat
+    - host: donetick.domain.com
       paths:
         - path: /
           pathType: Prefix
   tls:
     - hosts:
-        - donetick.tomik.lat
+        - donetick.domain.com
       # Optional: specify the name of an existing TLS secret
       # secretName: "existing-tls-secret"
 
