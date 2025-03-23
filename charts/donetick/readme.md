@@ -18,7 +18,7 @@ To install the chart with the release name `my-donetick`:
 
 ```bash
 $ helm repo add donetick-chart https://rtomik.github.io/helm-charts
-$ helm install my-donetick donetick-chart/donetick
+$ helm install donetick donetick-chart/donetick
 ```
 
 > **Tip**: List all releases using `helm list`
