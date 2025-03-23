@@ -14,7 +14,7 @@ This chart deploys [Donetick](https://github.com/donetick/donetick) on a Kuberne
 
 ## Installing the Chart
 
-To install the chart with the release name `my-donetick`:
+To install the chart with the release name `donetick`:
 
 ```bash
 $ helm repo add donetick-chart https://rtomik.github.io/helm-charts
