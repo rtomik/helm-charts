@@ -1,43 +1,90 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
 image:
   repository: donetick/donetick
   tag: latest
   pullPolicy: IfNotPresent
-
-nameOverride: ""
-fullnameOverride: ""
-
+  
+## Deployment settings
 replicaCount: 1
+revisionHistoryLimit: 3
 
+# Optional startup arguments
+startupArgs: []
+  # - "--skip-migrations"  # Uncomment to skip database migrations on startup
+
+# Pod security settings
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Service settings
 service:
   type: ClusterIP
   port: 2021
 
+## Ingress settings
 ingress:
   enabled: true
   className: "traefik"
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
   hosts:
-    - host: donetick.example.com
+    - host: donetick.tomik.lat
       paths:
         - path: /
           pathType: Prefix
   tls:
     - hosts:
-        - donetick.example.com
+        - donetick.tomik.lat
+      # Optional: specify the name of an existing TLS secret
+      # secretName: "existing-tls-secret"
 
+## Persistence settings
 persistence:
   enabled: true
   storageClass: "longhorn"
   accessMode: ReadWriteOnce
   size: 1Gi
+  annotations: {}
 
+## Environment variables
 env:
   - name: DT_ENV
     value: selfhosted
   - name: DT_SQLITE_PATH
-    value: /donetick-data/donetick.db  
+    value: /donetick-data/donetick.db
 
+# Extra environment variables (for advanced use cases)
+extraEnv: []
+  # - name: DT_LOG_LEVEL
+  #   value: "debug"
+  # - name: DT_SKIP_MIGRATIONS
+  #   value: "true"
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes 
+extraVolumes: []
+
+## Resource limits and requests
 resources:
   limits:
     cpu: 500m
@@ -46,27 +93,78 @@ resources:
     cpu: 100m
     memory: 128Mi
 
+## Application health checks
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+    path: /health
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+    path: /health
+
+## Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+## Application configuration
 config:
   name: "selfhosted"
   is_done_tick_dot_com: false
   is_user_creation_disabled: false
+  
+  # Notification settings
   telegram:
     token: ""
   pushover:
     token: ""
+  
+  # Database configuration
   database:
     type: "sqlite"
     migration: true
-    # these are only required for postgres
-    host: "secret"
+    # Migration options
+    migration_skip: false  # Set to true to skip database migrations
+    migration_retry: 3     # Number of retries for failed migrations
+    
+    # These are only required for postgres - direct configuration
+    host: ""
     port: 5432
-    user: "secret"
-    password: "secret"
-    name: "secret"
+    user: ""
+    password: ""
+    name: ""
+    
+    # Secret configuration for database credentials
+    existingSecret: ""        # Name of existing Kubernetes secret
+    hostKey: "db-host"        # Key in the secret for database host
+    portKey: "db-port"        # Key in the secret for database port
+    userKey: "db-user"        # Key in the secret for database user
+    passwordKey: "db-password" # Key in the secret for database password
+    nameKey: "db-name"        # Key in the secret for database name
+  
+  # Security settings
+  # For production, use a generated secret and store in a Kubernetes Secret
   jwt:
-    secret: "secret"
+    existingSecret: "" # Set this to use an existing secret
+    secretKey: "jwtSecret" # The key in the secret where JWT secret is stored
+    secret: "changeme-this-secret-should-be-at-least-32-characters-long" # Only used if existingSecret is not set
     session_time: 168h
     max_refresh: 168h
+  
+  # Server configuration
   server:
     port: 2021
     read_timeout: 10s
@@ -76,25 +174,37 @@ config:
     cors_allow_origins:
       - "http://localhost:5173"
       - "http://localhost:7926"
-      # the below are required for the android app to work
+      # The below are required for the android app to work
       - "https://localhost"
       - "capacitor://localhost"
     serve_frontend: true
+
+  # Scheduler configuration
   scheduler_jobs:
     due_job: 30m
     overdue_job: 3h
     pre_due_job: 3h
+  
+  # Email settings
   email:
-    host: 
-    port: 
-    key: 
-    email:  
-    appHost:  
+    host: ""
+    port: ""
+    key: ""
+    email: ""
+    appHost: ""
+  
+  # OAuth2 configuration
   oauth2:
-    client_id: 
-    client_secret: 
-    auth_url: 
-    token_url: 
-    user_info_url: 
-    redirect_url: 
-    name: 
+    # Direct configuration
+    client_id: ""
+    client_secret: ""
+    # Secret configuration - alternative to direct configuration
+    existingSecret: ""        # Name of existing Kubernetes secret
+    clientIdKey: "client-id"  # Key in the secret for client ID
+    clientSecretKey: "client-secret" # Key in the secret for client secret
+    # Other OAuth2 settings
+    auth_url: ""
+    token_url: ""
+    user_info_url: ""
+    redirect_url: ""
+    name: ""

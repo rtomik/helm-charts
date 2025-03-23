@@ -5,6 +5,10 @@ metadata:
   name: {{ include "donetick.fullname" . }}-data
   labels:
     {{- include "donetick.labels" . | nindent 4 }}
+  {{- with .Values.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   accessModes:
     - {{ .Values.persistence.accessMode | quote }}

@@ -4,35 +4,144 @@ metadata:
   name: {{ include "donetick.fullname" . }}
   labels:
     {{- include "donetick.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   selector:
     matchLabels:
       {{- include "donetick.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   template:
     metadata:
       labels:
         {{- include "donetick.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["/donetick"]
+          {{- if .Values.startupArgs }}
+          args:
+            {{- range .Values.startupArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
           ports:
             - name: http
-              containerPort: 2021
+              containerPort: {{ .Values.config.server.port }}
               protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
           env:
           {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
           {{- end }}
+          {{- if or .Values.config.jwt.existingSecret .Values.config.oauth2.existingSecret .Values.config.database.existingSecret }}
+            # Secret-based environment variables
+            {{- if .Values.config.jwt.existingSecret }}
+            - name: DT_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.jwt.existingSecret }}
+                  key: {{ .Values.config.jwt.secretKey }}
+            {{- end }}
+            {{- if .Values.config.oauth2.existingSecret }}
+            - name: DT_OAUTH2_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.oauth2.existingSecret }}
+                  key: {{ .Values.config.oauth2.clientIdKey }}
+            - name: DT_OAUTH2_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.oauth2.existingSecret }}
+                  key: {{ .Values.config.oauth2.clientSecretKey }}
+            {{- end }}
+            {{- if and .Values.config.database.existingSecret (eq .Values.config.database.type "postgres") }}
+            - name: DT_DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.existingSecret }}
+                  key: {{ .Values.config.database.hostKey }}
+            - name: DT_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.existingSecret }}
+                  key: {{ .Values.config.database.portKey }}
+            - name: DT_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.existingSecret }}
+                  key: {{ .Values.config.database.userKey }}
+            - name: DT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.existingSecret }}
+                  key: {{ .Values.config.database.passwordKey }}
+            - name: DT_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.existingSecret }}
+                  key: {{ .Values.config.database.nameKey }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: config
-              mountPath: /config          
+              mountPath: /config
+              readOnly: true
             - name: data
               mountPath: /donetick-data
+            {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
+            - name: tmp
+              mountPath: /tmp
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
@@ -42,3 +151,22 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "donetick.fullname" . }}-data
+        {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
+        - name: tmp
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

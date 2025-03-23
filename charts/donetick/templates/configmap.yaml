@@ -16,41 +16,61 @@ data:
     database:
       type: {{ .Values.config.database.type | default "sqlite" | quote }}
       migration: {{ .Values.config.database.migration }}
-      host: {{ .Values.config.database.host | default "secret" | quote }}
-      port: {{ .Values.config.database.port | default 5432 }}
-      user: {{ .Values.config.database.user | default "secret" | quote }}
-      password: {{ .Values.config.database.password | default "secret" | quote }}
-      name: {{ .Values.config.database.name | default "secret" | quote }}
+      {{- if .Values.config.database.migration_skip }}
+      migration_skip: {{ .Values.config.database.migration_skip }}
+      {{- end }}
+      {{- if .Values.config.database.migration_retry }}
+      migration_retry: {{ .Values.config.database.migration_retry }}
+      {{- end }}
+      {{- if eq .Values.config.database.type "postgres" }}
+      {{- if not .Values.config.database.existingSecret }}
+      host: {{ .Values.config.database.host | quote }}
+      port: {{ .Values.config.database.port }}
+      user: {{ .Values.config.database.user | quote }}
+      password: {{ .Values.config.database.password | quote }}
+      name: {{ .Values.config.database.name | quote }}
+      {{- else }}
+      # Database credentials will be injected via environment variables from Secret
+      {{- end }}
+      {{- end }}
     jwt:
+      {{- if .Values.config.jwt.existingSecret }}
+      # Secret will be injected from Secret
+      {{- else }}
       secret: {{ .Values.config.jwt.secret | quote }}
-      session_time: {{ .Values.config.jwt.session_time | default "168h" | quote }}
-      max_refresh: {{ .Values.config.jwt.max_refresh | default "168h" | quote }}
+      {{- end }}
+      session_time: {{ .Values.config.jwt.session_time | quote }}
+      max_refresh: {{ .Values.config.jwt.max_refresh | quote }}
     server:
-      port: {{ .Values.config.server.port | default 2021 }}
-      read_timeout: {{ .Values.config.server.read_timeout | default "10s" | quote }}
-      write_timeout: {{ .Values.config.server.write_timeout | default "10s" | quote }}
-      rate_period: {{ .Values.config.server.rate_period | default "60s" | quote }}
-      rate_limit: {{ .Values.config.server.rate_limit | default 300 }}
+      port: {{ .Values.config.server.port }}
+      read_timeout: {{ .Values.config.server.read_timeout | quote }}
+      write_timeout: {{ .Values.config.server.write_timeout | quote }}
+      rate_period: {{ .Values.config.server.rate_period | quote }}
+      rate_limit: {{ .Values.config.server.rate_limit }}
       cors_allow_origins:
         {{- range .Values.config.server.cors_allow_origins }}
         - {{ . | quote }}
         {{- end }}
-      serve_frontend: {{ .Values.config.server.serve_frontend | default true }}
+      serve_frontend: {{ .Values.config.server.serve_frontend }}
     scheduler_jobs:
-      due_job: {{ .Values.config.scheduler_jobs.due_job | default "30m" | quote }}
-      overdue_job: {{ .Values.config.scheduler_jobs.overdue_job | default "3h" | quote }}
-      pre_due_job: {{ .Values.config.scheduler_jobs.pre_due_job | default "3h" | quote }}
+      due_job: {{ .Values.config.scheduler_jobs.due_job | quote }}
+      overdue_job: {{ .Values.config.scheduler_jobs.overdue_job | quote }}
+      pre_due_job: {{ .Values.config.scheduler_jobs.pre_due_job | quote }}
     email:
-      host: {{ .Values.config.email.host | quote }}
-      port: {{ .Values.config.email.port | quote }}
-      key: {{ .Values.config.email.key | quote }}
-      email: {{ .Values.config.email.email | quote }}
-      appHost: {{ .Values.config.email.appHost | quote }}
+      host: {{ .Values.config.email.host | default "" | quote }}
+      port: {{ .Values.config.email.port | default "" | quote }}
+      key: {{ .Values.config.email.key | default "" | quote }}
+      email: {{ .Values.config.email.email | default "" | quote }}
+      appHost: {{ .Values.config.email.appHost | default "" | quote }}
     oauth2:
-      client_id: {{ .Values.config.oauth2.client_id | quote }}
-      client_secret: {{ .Values.config.oauth2.client_secret | quote }}
-      auth_url: {{ .Values.config.oauth2.auth_url | quote }}
-      token_url: {{ .Values.config.oauth2.token_url | quote }}
-      user_info_url: {{ .Values.config.oauth2.user_info_url | quote }}
-      redirect_url: {{ .Values.config.oauth2.redirect_url | quote }}
-      name: {{ .Values.config.oauth2.name | quote }}
+      {{- if .Values.config.oauth2.existingSecret }}
+      # Client ID and Secret will be injected from Secret
+      {{- else }}
+      client_id: {{ .Values.config.oauth2.client_id | default "" | quote }}
+      client_secret: {{ .Values.config.oauth2.client_secret | default "" | quote }}
+      {{- end }}
+      auth_url: {{ .Values.config.oauth2.auth_url | default "" | quote }}
+      token_url: {{ .Values.config.oauth2.token_url | default "" | quote }}
+      user_info_url: {{ .Values.config.oauth2.user_info_url | default "" | quote }}
+      redirect_url: {{ .Values.config.oauth2.redirect_url | default "" | quote }}
+      name: {{ .Values.config.oauth2.name | default "" | quote }}

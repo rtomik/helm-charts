@@ -4,3 +4,13 @@ description: A Helm chart for Donetick application
 type: application
 version: 0.1.0
 appVersion: "latest"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - productivity
+  - task-management
+  - donetick
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/donetick/donetick
