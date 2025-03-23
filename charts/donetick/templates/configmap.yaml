@@ -64,7 +64,8 @@ data:
       appHost: {{ .Values.config.email.appHost | default "" | quote }}
     oauth2:
       {{- if .Values.config.oauth2.existingSecret }}
-      # Client ID and Secret will be injected from Secret
+      client_id: $DT_OAUTH2_CLIENT_ID
+      client_secret: $DT_OAUTH2_CLIENT_SECRET
       {{- else }}
       client_id: {{ .Values.config.oauth2.client_id | default "" | quote }}
       client_secret: {{ .Values.config.oauth2.client_secret | default "" | quote }}
