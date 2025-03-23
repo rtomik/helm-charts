@@ -2,7 +2,7 @@ apiVersion: v2
 name: donetick
 description: A Helm chart for Donetick application
 type: application
-version: 0.1.0
+version: 1.0.0
 appVersion: "latest"
 maintainers:
   - name: Richard Tomik
