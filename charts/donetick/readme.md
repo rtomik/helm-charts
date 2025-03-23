@@ -25,10 +25,10 @@ $ helm install donetick donetick-chart/donetick
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `my-donetick` deployment:
+To uninstall/delete the `donetick` deployment:
 
 ```bash
-$ helm delete my-donetick
+$  helm uninstall donetick
 ```
 
 ## Parameters
