@@ -3,6 +3,26 @@ entries:
   donetick:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-03-23T19:40:46.687161338Z"
+    description: A Helm chart for Donetick application
+    digest: c329ed38e81d0d9ae58bfc538f874c138aff0765aee95974d5ee55153c5a349d
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - task-management
+    - donetick
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: donetick
+    sources:
+    - https://github.com/donetick/donetick
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/donetick-1.0.1/donetick-1.0.1.tgz
+    version: 1.0.1
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-03-23T16:33:06.71881941Z"
     description: A Helm chart for Donetick application
     digest: a1efd17c56b4c7bc4560799a2752c41b379fdd7d57799cd9e764ff83baf00a9f
@@ -41,4 +61,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/donetick-0.1.0/donetick-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-23T16:33:06.718828086Z"
+generated: "2025-03-23T19:40:46.687173641Z"
