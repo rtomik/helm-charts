@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "recipya.fullname" . }}
+  labels:
+    {{- include "recipya.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "recipya.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "recipya.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.startupArgs }}
+          args:
+            {{- range .Values.startupArgs }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.server.port }}
+              protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+            - name: RECIPYA_SERVER_PORT
+              value: {{ .Values.config.server.port | quote }}
+            - name: RECIPYA_SERVER_URL
+              value: {{ .Values.config.server.url | quote }}
+            - name: RECIPYA_SERVER_AUTOLOGIN
+              value: {{ .Values.config.server.autologin | quote }}
+            - name: RECIPYA_SERVER_IS_DEMO
+              value: {{ .Values.config.server.is_demo | quote }}
+            - name: RECIPYA_SERVER_IS_PROD
+              value: {{ .Values.config.server.is_prod | quote }}
+            - name: RECIPYA_SERVER_NO_SIGNUPS
+              value: {{ .Values.config.server.no_signups | quote }}
+            
+            {{- if .Values.config.email.existingSecret }}
+            - name: RECIPYA_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.email.existingSecret }}
+                  key: {{ .Values.config.email.addressKey }}
+            - name: RECIPYA_EMAIL_SENDGRID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.email.existingSecret }}
+                  key: {{ .Values.config.email.sendgridKey }}
+            {{- else }}
+            - name: RECIPYA_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "recipya.fullname" . }}-secrets
+                  key: {{ .Values.config.email.addressKey }}
+            - name: RECIPYA_EMAIL_SENDGRID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "recipya.fullname" . }}-secrets
+                  key: {{ .Values.config.email.sendgridKey }}
+            {{- end }}
+            
+            {{- if .Values.config.documentIntelligence.existingSecret }}
+            - name: RECIPYA_DI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.documentIntelligence.existingSecret }}
+                  key: {{ .Values.config.documentIntelligence.endpointKey }}
+            - name: RECIPYA_DI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.documentIntelligence.existingSecret }}
+                  key: {{ .Values.config.documentIntelligence.keyKey }}
+            {{- else }}
+            - name: RECIPYA_DI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "recipya.fullname" . }}-secrets
+                  key: {{ .Values.config.documentIntelligence.endpointKey }}
+            - name: RECIPYA_DI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "recipya.fullname" . }}-secrets
+                  key: {{ .Values.config.documentIntelligence.keyKey }}
+            {{- end }}
+          
+          {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+          {{- end }}
+          
+          {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          volumeMounts:
+            - name: data
+              mountPath: /home/recipya/.config/Recipya
+            {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
+            - name: tmp
+              mountPath: /tmp
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "recipya.fullname" . }}-data
+        {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
+        - name: tmp
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: recipya
+description: A Helm chart for Recipya recipe manager application
+type: application
+version: 0.0.1
+appVersion: "v1.2.2"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - recipe-manager
+  - recipya
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/reaper47/recipya
