@@ -5,10 +5,13 @@ metadata:
   name: {{ include "recipya.fullname" . }}-data
   labels:
     {{- include "recipya.labels" . | nindent 4 }}
-  {{- with .Values.persistence.annotations }}
   annotations:
+    {{- if .Values.persistence.retain }}
+    "helm.sh/resource-policy": keep
+    {{- end }}
+    {{- with .Values.persistence.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   accessModes:
     - {{ .Values.persistence.accessMode | quote }}

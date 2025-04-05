@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "recipya.fullname" . }}-init-script
+  labels:
+    {{- include "recipya.labels" . | nindent 4 }}
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+    
+    CONFIG_DIR="/home/recipya/.config/Recipya"
+    CONFIG_FILE="$CONFIG_DIR/config.json"
+    TARGET_PORT={{ .Values.config.server.port }}
+    
+    echo "Starting initialization with port $TARGET_PORT..."
+    
+    # Create directories if they don't exist
+    mkdir -p $CONFIG_DIR/Backup
+    mkdir -p $CONFIG_DIR/Database
+    mkdir -p $CONFIG_DIR/Images
+    mkdir -p $CONFIG_DIR/Logs
+    mkdir -p $CONFIG_DIR/Videos
+    
+    echo "Directories created."
+    
+    # Create config.json if it doesn't exist or update the existing one
+    if [ -f "$CONFIG_FILE" ]; then
+      echo "Found existing config.json, updating port to $TARGET_PORT"
+      # Use jq to modify the port in the existing config file
+      TMP_FILE=$(mktemp)
+      cat $CONFIG_FILE | jq ".server.port = $TARGET_PORT" > $TMP_FILE
+      mv $TMP_FILE $CONFIG_FILE
+    else
+      echo "Creating new config.json with port $TARGET_PORT"
+      # Create a new config.json with default values and the specified port
+      cat > $CONFIG_FILE << EOF
+    {
+      "email": {
+        "from": "{{ .Values.config.email.address | default "" }}",
+        "sendGridAPIKey": "{{ .Values.config.email.sendgrid | default "" }}"
+      },
+      "integrations": {
+        "azureDocumentIntelligence": {
+          "endpoint": "{{ .Values.config.documentIntelligence.endpoint | default "" }}",
+          "key": "{{ .Values.config.documentIntelligence.key | default "" }}"
+        }
+      },
+      "server": {
+        "autologin": {{ .Values.config.server.autologin }},
+        "bypassGuide": false,
+        "isDemo": {{ .Values.config.server.is_demo }},
+        "noSignups": {{ .Values.config.server.no_signups }},
+        "isProduction": {{ .Values.config.server.is_prod }},
+        "port": $TARGET_PORT,
+        "url": "{{ .Values.config.server.url }}"
+      }
+    }
+    EOF
+    fi
+
+    # Set permissions using numeric IDs
+    echo "Setting permissions..."
+    chmod -R 755 $CONFIG_DIR
+    find $CONFIG_DIR -type f -exec chmod 644 {} \;
+    find $CONFIG_DIR -type d -exec chmod 755 {} \;
+    
+    # Change ownership by numeric ID
+    echo "Changing ownership to 1000:1000..."
+    chown -R 1000:1000 $CONFIG_DIR
+    
+    echo "Configuration completed successfully."
+    ls -la $CONFIG_DIR

@@ -5,8 +5,8 @@ metadata:
   labels:
     {{- include "recipya.labels" . | nindent 4 }}
   annotations:
-    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    checksum/init-script: {{ include (print $.Template.BasePath "/configmap-init-script.yaml") . | sha256sum }}
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
@@ -31,12 +31,48 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      # Set security context for the pod
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        fsGroup: 1000
+      
+      # Init container to configure the application
+      initContainers:
+        - name: init-config
+          image: alpine:3.18
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Installing jq..."
+              apk add --no-cache jq
+              echo "Running initialization script..."
+              /scripts/init.sh
+          securityContext:
+            runAsUser: 0  # Run as root to modify config files
+            runAsGroup: 0
+          volumeMounts:
+            - name: data
+              mountPath: /home/recipya/.config/Recipya
+            - name: init-script
+              mountPath: /scripts
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      
+      # Main application container
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
-            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+              - ALL
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           {{- if .Values.startupArgs }}
@@ -47,7 +83,7 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ .Values.config.server.port }}
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
           {{- if .Values.probes.liveness.enabled }}
           livenessProbe:
@@ -72,8 +108,9 @@ spec:
             successThreshold: {{ .Values.probes.readiness.successThreshold }}
           {{- end }}
           env:
-            - name: RECIPYA_SERVER_PORT
-              value: {{ .Values.config.server.port | quote }}
+            # Critical environment variables for proper directory structure
+            - name: HOME
+              value: "/home/recipya"
             - name: RECIPYA_SERVER_URL
               value: {{ .Values.config.server.url | quote }}
             - name: RECIPYA_SERVER_AUTOLOGIN
@@ -97,16 +134,22 @@ spec:
                   name: {{ .Values.config.email.existingSecret }}
                   key: {{ .Values.config.email.sendgridKey }}
             {{- else }}
+            {{- if .Values.config.email.address }}
             - name: RECIPYA_EMAIL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "recipya.fullname" . }}-secrets
                   key: {{ .Values.config.email.addressKey }}
+                  optional: true
+            {{- end }}
+            {{- if .Values.config.email.sendgrid }}
             - name: RECIPYA_EMAIL_SENDGRID
               valueFrom:
                 secretKeyRef:
                   name: {{ include "recipya.fullname" . }}-secrets
                   key: {{ .Values.config.email.sendgridKey }}
+                  optional: true
+            {{- end }}
             {{- end }}
             
             {{- if .Values.config.documentIntelligence.existingSecret }}
@@ -121,16 +164,22 @@ spec:
                   name: {{ .Values.config.documentIntelligence.existingSecret }}
                   key: {{ .Values.config.documentIntelligence.keyKey }}
             {{- else }}
+            {{- if .Values.config.documentIntelligence.endpoint }}
             - name: RECIPYA_DI_ENDPOINT
               valueFrom:
                 secretKeyRef:
                   name: {{ include "recipya.fullname" . }}-secrets
                   key: {{ .Values.config.documentIntelligence.endpointKey }}
+                  optional: true
+            {{- end }}
+            {{- if .Values.config.documentIntelligence.key }}
             - name: RECIPYA_DI_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "recipya.fullname" . }}-secrets
                   key: {{ .Values.config.documentIntelligence.keyKey }}
+                  optional: true
+            {{- end }}
             {{- end }}
           
           {{- range .Values.env }}
@@ -145,26 +194,24 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /home/recipya/.config/Recipya
-            {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
-            - name: tmp
-              mountPath: /tmp
-            {{- end }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "recipya.fullname" . }}-data
-        {{- if not .Values.containerSecurityContext.readOnlyRootFilesystem }}
-        - name: tmp
-          emptyDir: {}
-        {{- end }}
+        - name: init-script
+          configMap:
+            name: {{ include "recipya.fullname" . }}-init-script
+            defaultMode: 0755
         {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+      
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

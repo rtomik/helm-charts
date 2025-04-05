@@ -19,45 +19,63 @@ fullnameOverride: ""
 podSecurityContext:
   fsGroup: 1000
 
-# Security context for the container
-containerSecurityContext:
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 1000
+containerSecurityContext: {}
 
 # Service configuration
 service:
   type: ClusterIP
   port: 8078
 
+# Recipya configuration
+config:
+  email:
+    address: ""
+    sendgrid: ""
+    existingSecret: ""
+    addressKey: "email"
+    sendgridKey: "sendgrid"
+  
+  documentIntelligence:
+    endpoint: ""
+    key: ""
+    existingSecret: ""
+    endpointKey: "di_endpoint"
+    keyKey: "di_key"
+  
+  server:
+    port: 8078
+    autologin: false
+    is_demo: false
+    is_prod: true
+    no_signups: false
+    url: "http://0.0.0.0"
+
 # Ingress configuration
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+  enabled: true
+  className: "traefik"
+  annotations: []
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # traefik.ingress.kubernetes.io/router.middlewares: default-recipya-headers@kubernetescrd
   hosts:
-    - host: chart-example.local
+    - host: recipya.<domain>
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
 
+
 # Persistent volume claim
 persistence:
   enabled: true
   accessMode: ReadWriteOnce
-  size: 1Gi
-  # storageClass: ""
+  size: 5Gi
+  storageClass: ""
   annotations: {}
+  retain: true
 
 # Resource limits and requests
 resources:
@@ -99,41 +117,17 @@ extraVolumes: []
 probes:
   liveness:
     enabled: true
-    path: /health
-    initialDelaySeconds: 10
+    path: /
+    initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
   readiness:
     enabled: true
-    path: /health
-    initialDelaySeconds: 10
+    path: /
+    initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
-
-# Recipya configuration
-config:
-  email:
-    address: ""
-    sendgrid: ""
-    existingSecret: ""
-    addressKey: "email"
-    sendgridKey: "sendgrid"
-  
-  documentIntelligence:
-    endpoint: ""
-    key: ""
-    existingSecret: ""
-    endpointKey: "di_endpoint"
-    keyKey: "di_key"
-  
-  server:
-    port: 8078
-    autologin: false
-    is_demo: false
-    is_prod: false
-    no_signups: false
-    url: "http://0.0.0.0"

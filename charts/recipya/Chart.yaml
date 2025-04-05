@@ -2,7 +2,7 @@ apiVersion: v2
 name: recipya
 description: A Helm chart for Recipya recipe manager application
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "v1.2.2"
 maintainers:
   - name: Richard Tomik

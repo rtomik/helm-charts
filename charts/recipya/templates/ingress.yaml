@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "donetick.fullname" . }}
+  name: {{ include "recipya.fullname" . }}
   labels:
-    {{- include "donetick.labels" . | nindent 4 }}
+    {{- include "recipya.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -35,7 +35,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "donetick.fullname" $ }}
+                name: {{ include "recipya.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
