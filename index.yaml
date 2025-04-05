@@ -64,6 +64,25 @@ entries:
   recipya:
   - apiVersion: v2
     appVersion: v1.2.2
+    created: "2025-04-05T20:58:53.611303005Z"
+    description: A Helm chart for Recipya recipe manager application
+    digest: 1ba5f92cd205cc226d1894d194287ab8576c18717f2318642af22a88d5d6a930
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipe-manager
+    - recipya
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: recipya
+    sources:
+    - https://github.com/reaper47/recipya
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.2/recipya-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
+    appVersion: v1.2.2
     created: "2025-04-05T16:38:37.863551239Z"
     description: A Helm chart for Recipya recipe manager application
     digest: fb46f78e7036f5d76f88f405caf49108547110374f1cebea7ab91c75add46e9d
@@ -81,4 +100,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-04-05T16:38:37.863592366Z"
+generated: "2025-04-05T20:58:53.611314797Z"
