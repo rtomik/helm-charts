@@ -2,6 +2,8 @@
 
 A Helm chart for deploying [Recipya](https://github.com/reaper47/recipya) on Kubernetes.
 
+[Source Code](https://github.com/rtomik/helm-charts/tree/main/charts%2Frecipya)
+
 ## Introduction
 
 This chart deploys Recipya recipe manager on a Kubernetes cluster using the Helm package manager.
