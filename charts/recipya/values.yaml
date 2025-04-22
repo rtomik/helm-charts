@@ -52,8 +52,8 @@ config:
 
 # Ingress configuration
 ingress:
-  enabled: true
-  className: "traefik"
+  enabled: false
+  className: ""
   annotations: []
     # traefik.ingress.kubernetes.io/router.entrypoints: websecure
     # traefik.ingress.kubernetes.io/router.middlewares: default-recipya-headers@kubernetescrd
@@ -70,7 +70,7 @@ ingress:
 
 # Persistent volume claim
 persistence:
-  enabled: true
+  enabled: false
   accessMode: ReadWriteOnce
   size: 5Gi
   storageClass: ""

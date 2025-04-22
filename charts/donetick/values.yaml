@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: donetick/donetick
-  tag: latest
+  tag: "v0.1.38"
   pullPolicy: IfNotPresent
   
 ## Deployment settings
@@ -41,8 +41,8 @@ service:
 
 ## Ingress settings
 ingress:
-  enabled: true
-  className: "traefik"
+  enabled: false
+  className: ""
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
   hosts:
@@ -58,8 +58,8 @@ ingress:
 
 ## Persistence settings
 persistence:
-  enabled: true
-  storageClass: "longhorn"
+  enabled: false
+  storageClass: ""
   accessMode: ReadWriteOnce
   size: 1Gi
   annotations: {}

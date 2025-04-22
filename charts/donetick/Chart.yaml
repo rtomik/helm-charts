@@ -3,7 +3,7 @@ name: donetick
 description: A Helm chart for Donetick application
 type: application
 version: 1.0.1
-appVersion: "latest"
+appVersion: "v0.1.38"
 maintainers:
   - name: Richard Tomik
     email: no@m.com
