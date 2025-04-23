@@ -41,6 +41,27 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/donetick-1.0.0/donetick-1.0.0.tgz
     version: 1.0.0
+  jellyseerr:
+  - apiVersion: v2
+    appVersion: 2.5.2
+    created: "2025-04-23T14:10:23.282104137Z"
+    description: A Helm chart for Jellyseerr - A fork of Overseerr for Jellyfin support
+    digest: aa76f1e2218c366bf982829b1214adb960e13d75afbf2bb5d724d85e3cd5ffbe
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - jellyseerr
+    - jellyfin
+    - media-requests
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: jellyseerr
+    sources:
+    - https://github.com/fallenbagel/jellyseerr
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/jellyseerr-0.0.1/jellyseerr-0.0.1.tgz
+    version: 0.0.1
   recipya:
   - apiVersion: v2
     appVersion: v1.2.2
@@ -80,4 +101,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-04-05T20:58:53.611314797Z"
+generated: "2025-04-23T14:10:23.444340256Z"
