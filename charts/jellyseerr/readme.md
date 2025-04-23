@@ -17,8 +17,8 @@ This chart deploys Jellyseerr on a Kubernetes cluster using the Helm package man
 To install the chart with the release name `jellyseerr`:
 
 ```bash
-$ helm repo add rtomik-charts https://rtomik.github.io/helm-charts
-$ helm install jellyseerr rtomik-charts/jellyseerr
+helm repo add rtomik-charts https://rtomik.github.io/helm-charts
+helm install jellyseerr rtomik-charts/jellyseerr 
 ```
 
 > **Tip**: List all releases using `helm list`
@@ -28,7 +28,7 @@ $ helm install jellyseerr rtomik-charts/jellyseerr
 To uninstall/delete the `jellyseerr` deployment:
 
 ```bash
-$ helm uninstall jellyseerr
+helm uninstall jellyseerr
 ```
 
 ## Parameters
