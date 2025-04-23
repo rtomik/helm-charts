@@ -78,13 +78,13 @@ persistence:
   retain: true
 
 # Resource limits and requests
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 100m
-    memory: 128Mi
+# resources:
+#   limits:
+#     cpu: 500m
+#     memory: 512Mi
+#   requests:
+#     cpu: 100m
+#     memory: 128Mi
 
 # Node selector
 nodeSelector: {}

@@ -1,0 +1,117 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: ghcr.io/fallenbagel/jellyseerr
+  tag: 2.5.2
+  pullPolicy: IfNotPresent
+  
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Optional startup arguments
+startupArgs: []
+
+# Pod security settings
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Pod annotations
+podAnnotations: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 5055
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: jellyseerr.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # - hosts:
+  #     - jellyseerr.domain.com
+  #   secretName: jellyseerr-tls
+
+## Persistence settings
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
+## Environment variables
+env:
+  - name: TZ
+    value: "UTC"
+  - name: LOG_LEVEL
+    value: "info"
+  - name: PORT
+    value: "5055"
+
+# Extra environment variables (for advanced use cases)
+extraEnv: []
+  # - name: NODE_ENV
+  #   value: "production"
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes 
+extraVolumes: []
+
+## Resource limits and requests
+# resources:
+#   limits:
+#     cpu: 500m
+#     memory: 512Mi
+#   requests:
+#     cpu: 100m
+#     memory: 128Mi
+
+## Application health checks
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+    path: /api/v1/status
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+    path: /api/v1/status

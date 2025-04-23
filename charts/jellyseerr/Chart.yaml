@@ -1,0 +1,16 @@
+apiVersion: v2
+name: jellyseerr
+description: A Helm chart for Jellyseerr - A fork of Overseerr for Jellyfin support
+type: application
+version: 0.0.1
+appVersion: 2.5.2
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - jellyseerr
+  - jellyfin
+  - media-requests
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/fallenbagel/jellyseerr
