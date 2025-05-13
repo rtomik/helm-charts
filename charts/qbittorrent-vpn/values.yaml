@@ -1,0 +1,228 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+## Pod security settings
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0    # Run all containers as root
+  fsGroup: 0      # Use root group for volumes
+
+## qBittorrent Image settings
+qbittorrent:
+  image:
+    repository: linuxserver/qbittorrent
+    tag: 5.1.0
+    pullPolicy: IfNotPresent
+  
+  securityContext: {}
+
+  # Open port for BitTorrent traffic
+  bittorrentPort: 6881
+
+  env:
+    - name: PUID
+      value: "0"   # Run as root
+    - name: PGID
+      value: "0"   # Root group
+    - name: TZ
+      value: "UTC"
+    - name: WEBUI_PORT
+      value: "8080"
+  
+  
+  extraEnv: []
+  
+  service:
+    port: 8080
+  
+  #resources:
+  #  limits:
+  #    cpu: 1000m
+  #    memory: 2Gi
+  #  requests:
+  #    cpu: 200m
+  #    memory: 512Mi
+
+  persistence:
+    config:
+      enabled: true
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 2Gi
+      mountPath: /config
+    
+    downloads:
+      enabled: true
+      existingClaim: ""
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 2Gi
+      mountPath: /downloads
+
+  # Volume mounts specific to qBittorrent
+  extraVolumeMounts: []
+  
+  # Volumes specific to qBittorrent
+  extraVolumes: []
+
+# Probes for qBittorrent
+probes:
+  liveness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 0  # Startup probe handles delayed start
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  
+  readiness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 0  # Startup probe handles delayed start
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+## Gluetun VPN settings
+gluetun:
+  enabled: true
+  image:
+    repository: qmcgaw/gluetun
+    tag: v3.40.0  # Latest version as of this writing
+    pullPolicy: IfNotPresent
+  
+  securityContext:
+    privileged: true
+    capabilities:
+      add:
+        - NET_ADMIN
+  
+  # VPN provider configuration
+  vpn:
+    # Choose from: nordvpn, protonvpn, expressvpn, surfshark, mullvad, ivpn, private internet access, etc.
+    provider: "nordvpn"
+    
+    # Choose from: openvpn or wireguard
+    type: "openvpn"
+    
+    # Server selection (comma-separated lists)
+    serverCountries: "Netherlands"  # e.g., "Netherlands,Germany,Sweden"
+    serverCities: ""            # e.g., "Amsterdam,Frankfurt" (optional)
+    serverNames: ""             # e.g., "nl1,nl2" (optional)
+    randomize: "true"           # Randomize server selection
+    
+    # OpenVPN specific settings (when type is "openvpn")
+    openvpn:
+      # Add any OpenVPN specific settings here, they'll be converted to env vars
+      OPENVPN_PROTOCOL: "udp"
+    
+    # WireGuard specific settings (when type is "wireguard")
+    wireguard:
+      privateKey: ""  # Will be stored in Secret if provided
+      privateKeyExistingSecret: ""
+      privateKeyExistingSecretKey: ""
+      addresses: ""   # e.g., "10.64.222.21/32"
+      endpointIP: ""  # Optional: specify endpoint IP
+      endpointPort: ""  # Optional: specify endpoint port
+      publicKey: ""   # Optional: server public key
+  
+  # VPN credentials (choose one method)
+  credentials:
+    create: true # set to false if using existing secret
+    # For OpenVPN (normal credentials)
+    username: ""
+    password: ""
+    # For WireGuard, the privateKey is specified in vpn.wireguard.privateKey
+    
+    # Alternatively, reference an existing secret
+    existingSecret: ""
+    usernameKey: "username"
+    passwordKey: "password"
+  
+  # General Gluetun settings as environment variables
+  settings:
+    FIREWALL: "on"
+    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    DNS_ADDRESS: "1.1.1.1"
+    HEALTH_SERVER_PORT: "8000"
+    
+    # Important: Add these settings to make networking work correctly with ingress
+    SERVER_ALLOWLIST: "qbittorrent:8080"  # Allow accessing qBittorrent container
+    FIREWALL_INPUT_PORTS: "8080"          # Allow ingress traffic to port 8080
+    FIREWALL_DEBUG: "on"                  # Enable firewall debugging (temporarily)
+    JOURNALD: "off"                       # Disable journald (not needed for debugging)
+    
+    # Optional port forwarding
+    VPN_PORT_FORWARDING: "off"
+  
+  # Extra environment variables
+  extraEnv:
+    - name: LOG_LEVEL
+      value: "info"
+  
+  # Extra ports to expose
+  extraPorts: []
+  # - name: custom-port
+  #   containerPort: 9999
+  #   protocol: TCP
+  
+  # Resources for Gluetun
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Persistence for Gluetun
+  persistence:
+    enabled: true
+    existingClaim: false
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 100Mi
+    
+  # Volume mounts specific to Gluetun
+  extraVolumeMounts: []
+  
+  # Volumes specific to Gluetun
+  extraVolumes: []
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 8080
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations: []
+  hosts:
+    - host: qbittorrent.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - qbittorrent.example.com
+
+# Additional specifications
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+extraVolumes: []
+
+# Temporary options for development/debugging
+hostNetwork: false
+initContainers: []

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: qbittorrent-vpn
+description: qBittorrent with Gluetun VPN sidecar for Kubernetes
+type: application
+version: 0.0.1
+appVersion: 5.1.0
+maintainers:
+  - name: Richard Tomik
+    email: richard.tomik@proton.me
+keywords:
+  - qbittorrent
+  - vpn
+  - gluetun
+  - torrent
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/linuxserver/docker-qbittorrent
+  - https://github.com/qdm12/gluetun

@@ -1,0 +1,38 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your qBittorrent with VPN has been deployed successfully!
+
+1. Get the application URL:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "qbittorrent-vpn.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "qbittorrent-vpn.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "qbittorrent-vpn.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "qbittorrent-vpn.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+  Visit http://127.0.0.1:{{ .Values.service.port }} to access qBittorrent
+{{- end }}
+
+2. VPN Status:
+   To check the VPN connection status:
+   kubectl exec -it -n {{ .Release.Namespace }} deployment/{{ include "qbittorrent-vpn.fullname" . }} -c gluetun -- curl -s http://localhost:8000/v1/vpn/status
+
+3. Public IP:
+   To check your current public IP through the VPN:
+   kubectl exec -it -n {{ .Release.Namespace }} deployment/{{ include "qbittorrent-vpn.fullname" . }} -c gluetun -- curl -s http://localhost:8000/v1/publicip/ip
+
+4. Verify qBittorrent:
+   Make sure qBittorrent is functioning by accessing the Web UI at the URL in step 1.
+
+For more information about this chart: 
+https://github.com/rtomik/helm-charts/tree/main/charts/qbittorrent-vpn

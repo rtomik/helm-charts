@@ -1,0 +1,306 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "qbittorrent-vpn.fullname" . }}
+  labels:
+    {{- include "qbittorrent-vpn.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "qbittorrent-vpn.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate  # Using Recreate instead of RollingUpdate for stateful pods
+  template:
+    metadata:
+      labels:
+        {{- include "qbittorrent-vpn.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      # Add hostNetwork if specified
+      {{- if .Values.hostNetwork }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      {{- end }}
+      
+      # Init containers if needed for directory setup
+      {{- if .Values.initContainers }}
+      initContainers:
+      {{- toYaml .Values.initContainers | nindent 8 }}
+      {{- end }}
+      
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      
+      containers:
+        {{- if .Values.gluetun.enabled }}
+        # Gluetun VPN container
+        - name: gluetun
+          image: "{{ .Values.gluetun.image.repository }}:{{ .Values.gluetun.image.tag }}"
+          imagePullPolicy: {{ .Values.gluetun.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.gluetun.securityContext | nindent 12 }}
+          env:
+            # VPN Provider selection - Common settings for all VPN types
+            - name: VPN_SERVICE_PROVIDER
+              value: {{ .Values.gluetun.vpn.provider | quote }}
+            - name: VPN_TYPE
+              value: {{ .Values.gluetun.vpn.type | quote }}
+            - name: SERVER_COUNTRIES
+              value: {{ .Values.gluetun.vpn.serverCountries | quote }}
+            {{- if .Values.gluetun.vpn.serverNames }}
+            - name: SERVER_HOSTNAMES
+              value: {{ .Values.gluetun.vpn.serverNames | quote }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.serverCities }}
+            - name: SERVER_CITIES
+              value: {{ .Values.gluetun.vpn.serverCities | quote }}
+            {{- end }}
+            {{- if .Values.gluetun.vpn.randomize }}
+            - name: SERVER_HOSTNAMES_RANDOMIZED
+              value: {{ .Values.gluetun.vpn.randomize | quote }}
+            {{- end }}
+            
+            # OpenVPN specific configuration
+            {{- if eq .Values.gluetun.vpn.type "openvpn" }}
+            {{- if .Values.gluetun.credentials.create }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent-vpn.fullname" . }}-vpn-credentials
+                  key: {{ .Values.gluetun.credentials.usernameKey }}
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent-vpn.fullname" . }}-vpn-credentials
+                  key: {{ .Values.gluetun.credentials.passwordKey }}
+            {{- else if .Values.gluetun.credentials.existingSecret }}
+            - name: OPENVPN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gluetun.credentials.existingSecret }}
+                  key: {{ .Values.gluetun.credentials.usernameKey }}
+            - name: OPENVPN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gluetun.credentials.existingSecret }}
+                  key: {{ .Values.gluetun.credentials.passwordKey }}
+            {{- end }}
+            
+            # Additional OpenVPN settings
+            {{- with .Values.gluetun.vpn.openvpn }}
+            {{- range $key, $value := . }}
+            - name: {{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            
+            # WireGuard specific configuration
+            {{- if eq .Values.gluetun.vpn.type "wireguard" }}
+            {{- if and .Values.gluetun.vpn.wireguard.privateKey .Values.gluetun.credentials.create }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "qbittorrent-vpn.fullname" . }}-vpn-credentials
+                  key: wireguard_private_key
+            {{- else if and .Values.gluetun.vpn.wireguard.privateKeyExistingSecret .Values.gluetun.vpn.wireguard.privateKeyExistingSecretKey }}
+            - name: WIREGUARD_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.gluetun.vpn.wireguard.privateKeyExistingSecret }}
+                  key: {{ .Values.gluetun.vpn.wireguard.privateKeyExistingSecretKey }}
+            {{- end }}
+            
+            # Additional WireGuard settings
+            {{- with .Values.gluetun.vpn.wireguard }}
+            {{- if .addresses }}
+            - name: WIREGUARD_ADDRESSES
+              value: {{ .addresses | quote }}
+            {{- end }}
+            {{- if .endpointIP }}
+            - name: WIREGUARD_ENDPOINT_IP
+              value: {{ .endpointIP | quote }}
+            {{- end }}
+            {{- if .endpointPort }}
+            - name: WIREGUARD_ENDPOINT_PORT
+              value: {{ .endpointPort | quote }}
+            {{- end }}
+            {{- if .publicKey }}
+            - name: WIREGUARD_PUBLIC_KEY
+              value: {{ .publicKey | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            
+            # Gluetun general settings
+            {{- with .Values.gluetun.settings }}
+            {{- range $key, $value := . }}
+            - name: {{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+            
+            # Extra environment variables
+            {{- with .Values.gluetun.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          
+          ports:
+            - name: control
+              containerPort: 8000
+              protocol: TCP
+            - name: http-proxy
+              containerPort: 8888
+              protocol: TCP
+            - name: shadowsocks-tcp
+              containerPort: 8388
+              protocol: TCP
+            - name: shadowsocks-udp
+              containerPort: 8388
+              protocol: UDP
+            {{- with .Values.gluetun.extraPorts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          
+          volumeMounts:
+            # Mount tun device for VPN
+            - name: tun
+              mountPath: /dev/net/tun
+            {{- if .Values.gluetun.persistence.enabled }}
+            - name: gluetun-config
+              mountPath: /gluetun
+            {{- end }}
+            {{- with .Values.gluetun.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          
+          resources:
+            {{- toYaml .Values.gluetun.resources | nindent 12 }}
+          
+        {{- end }}
+          
+        # qBittorrent container
+        - name: qbittorrent
+          image: "{{ .Values.qbittorrent.image.repository }}:{{ .Values.qbittorrent.image.tag }}"
+          imagePullPolicy: {{ .Values.qbittorrent.image.pullPolicy }}
+          {{- if .Values.qbittorrent.securityContext }}
+          securityContext:
+            {{- toYaml .Values.qbittorrent.securityContext | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.qbittorrent.service.port }}
+              protocol: TCP
+            {{- if .Values.qbittorrent.bittorrentPort }}
+            - name: bittorrent-tcp
+              containerPort: {{ .Values.qbittorrent.bittorrentPort }}
+              protocol: TCP
+            - name: bittorrent-udp
+              containerPort: {{ .Values.qbittorrent.bittorrentPort }}
+              protocol: UDP
+            {{- end }}
+          
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          
+          env:
+          {{- range .Values.qbittorrent.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+          {{- end }}
+          {{- with .Values.qbittorrent.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          volumeMounts:
+            {{- if .Values.qbittorrent.persistence.config.enabled }}
+            - name: config
+              mountPath: {{ .Values.qbittorrent.persistence.config.mountPath }}
+            {{- end }}
+            
+            {{- if .Values.qbittorrent.persistence.downloads.enabled }}
+            - name: downloads
+              mountPath: {{ .Values.qbittorrent.persistence.downloads.mountPath }}
+            {{- end }}
+            
+            {{- with .Values.qbittorrent.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          
+          resources:
+            {{- toYaml .Values.qbittorrent.resources | nindent 12 }}
+      
+      volumes:
+        # Create /dev/net/tun as a device
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+        
+        {{- if .Values.qbittorrent.persistence.config.enabled }}
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ if .Values.qbittorrent.persistence.config.existingClaim }}{{ .Values.qbittorrent.persistence.config.existingClaim }}{{ else }}{{ include "qbittorrent-vpn.fullname" . }}-config{{ end }}
+        {{- end }}
+        
+        {{- if .Values.qbittorrent.persistence.downloads.enabled }}
+        - name: downloads
+          persistentVolumeClaim:
+            claimName: {{ if .Values.qbittorrent.persistence.downloads.existingClaim }}{{ .Values.qbittorrent.persistence.downloads.existingClaim }}{{ else }}{{ include "qbittorrent-vpn.fullname" . }}-downloads{{ end }}
+        {{- end }}
+        
+        {{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled }}
+        {{- if .Values.gluetun.persistence.useEmptyDir }}
+        - name: gluetun-config
+          emptyDir: {}
+        {{- else }}
+        - name: gluetun-config
+          persistentVolumeClaim:
+            claimName: {{ if .Values.gluetun.persistence.existingClaim }}{{ .Values.gluetun.persistence.existingClaim }}{{ else }}{{ include "qbittorrent-vpn.fullname" . }}-gluetun{{ end }}
+        {{- end }}
+        {{- end }}
+        
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

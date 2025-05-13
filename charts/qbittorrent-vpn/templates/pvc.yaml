@@ -1,0 +1,55 @@
+{{- if and .Values.qbittorrent.persistence.config.enabled (not .Values.qbittorrent.persistence.config.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent-vpn.fullname" . }}-config
+  labels:
+    {{- include "qbittorrent-vpn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.config.accessMode | quote }}
+  {{- if .Values.qbittorrent.persistence.config.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.config.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.config.size | quote }}
+{{- end }}
+
+{{- if and .Values.qbittorrent.persistence.downloads.enabled (not .Values.qbittorrent.persistence.downloads.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent-vpn.fullname" . }}-downloads
+  labels:
+    {{- include "qbittorrent-vpn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.qbittorrent.persistence.downloads.accessMode | quote }}
+  {{- if .Values.qbittorrent.persistence.downloads.storageClass }}
+  storageClassName: {{ .Values.qbittorrent.persistence.downloads.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.qbittorrent.persistence.downloads.size | quote }}
+{{- end }}
+
+{{- if and .Values.gluetun.enabled .Values.gluetun.persistence.enabled (not .Values.gluetun.persistence.useEmptyDir) (not .Values.gluetun.persistence.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "qbittorrent-vpn.fullname" . }}-gluetun
+  labels:
+    {{- include "qbittorrent-vpn.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.gluetun.persistence.accessMode | quote }}
+  {{- if .Values.gluetun.persistence.storageClass }}
+  storageClassName: {{ .Values.gluetun.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.gluetun.persistence.size | quote }}
+{{- end }}
