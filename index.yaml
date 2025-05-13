@@ -62,6 +62,29 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/jellyseerr-0.0.1/jellyseerr-0.0.1.tgz
     version: 0.0.1
+  qbittorrent-vpn:
+  - apiVersion: v2
+    appVersion: 5.1.0
+    created: "2025-05-13T20:13:31.370418675Z"
+    description: qBittorrent with Gluetun VPN sidecar for Kubernetes
+    digest: 9736b2f3dcce5d32f39225138d78a621b3e2528e3283b36ef12bf2a91aa66c12
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - qbittorrent
+    - vpn
+    - gluetun
+    - torrent
+    maintainers:
+    - email: richard.tomik@proton.me
+      name: Richard Tomik
+    name: qbittorrent-vpn
+    sources:
+    - https://github.com/linuxserver/docker-qbittorrent
+    - https://github.com/qdm12/gluetun
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/qbittorrent-vpn-0.0.1/qbittorrent-vpn-0.0.1.tgz
+    version: 0.0.1
   recipya:
   - apiVersion: v2
     appVersion: v1.2.2
@@ -101,4 +124,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-04-23T14:10:23.444340256Z"
+generated: "2025-05-13T20:13:31.564156401Z"
