@@ -6,6 +6,9 @@ A Helm chart for deploying [Jellyseerr](https://github.com/fallenbagel/jellyseer
 
 This chart deploys Jellyseerr on a Kubernetes cluster using the Helm package manager. Jellyseerr is a fork of Overseerr for Jellyfin support.
 
+Source code can be found here:
+- https://github.com/rtomik/helm-charts/tree/main/charts/jellyseerr
+
 ## Prerequisites
 
 - Kubernetes 1.19+

@@ -6,6 +6,9 @@ A Helm chart for deploying qBittorrent with a Gluetun VPN sidecar container on K
 
 This chart deploys [qBittorrent](https://www.qbittorrent.org/) alongside [Gluetun](https://github.com/qdm12/gluetun), a VPN client/tunnel in a container, to ensure all BitTorrent traffic is routed through the VPN. The chart supports all major VPN providers and protocols through Gluetun's comprehensive compatibility.
 
+Source code can be found here:
+- https://github.com/rtomik/helm-charts/tree/main/charts/qbittorrent-vpn
+
 Note: Currently only tested with NordVPN an OpenVPN configuration.
 
 ## Features

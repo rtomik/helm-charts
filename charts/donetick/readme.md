@@ -6,6 +6,10 @@ A Helm chart for deploying the Donetick task management application on Kubernete
 
 This chart deploys [Donetick](https://github.com/donetick/donetick) on a Kubernetes cluster using the Helm package manager. 
 
+Source code can be found here:
+- https://github.com/rtomik/helm-charts/tree/main/charts/donetick
+
+
 ## Prerequisites
 
 - Kubernetes 1.19+
