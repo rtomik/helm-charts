@@ -62,6 +62,27 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/jellyseerr-0.0.1/jellyseerr-0.0.1.tgz
     version: 0.0.1
+  karakeep:
+  - apiVersion: v2
+    appVersion: 0.26.0
+    created: "2025-08-11T09:26:46.502241589Z"
+    description: Karakeep helm chart for Kubernetes
+    digest: 33f33c0b06a6dcd78a368f1efd0de0f513695e1bca3a7c44de44a9dc44bc7f31
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - bookmark-manager
+    - karakeep
+    - productivity
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: karakeep
+    sources:
+    - https://github.com/karakeep-app/karakeep
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/karakeep-0.0.1/karakeep-0.0.1.tgz
+    version: 0.0.1
   qbittorrent-vpn:
   - apiVersion: v2
     appVersion: 5.1.0
@@ -124,4 +145,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-05-13T20:13:31.564156401Z"
+generated: "2025-08-11T09:26:46.728585612Z"
