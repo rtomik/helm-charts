@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "karakeep.fullname" . }}
+  labels:
+    {{- include "karakeep.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "karakeep.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "karakeep.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        # Karakeep main application
+        - name: karakeep
+          image: "{{ .Values.karakeep.image.repository }}:{{ .Values.karakeep.image.tag }}"
+          imagePullPolicy: {{ .Values.karakeep.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.karakeep.service.port }}
+              protocol: TCP
+          env:
+            {{- range .Values.karakeep.env }}
+            - name: {{ .name }}
+              {{- if and (eq .name "NEXTAUTH_URL") $.Values.ingress.enabled }}
+              {{- $host := (index $.Values.ingress.hosts 0).host }}
+              {{- if $.Values.ingress.tls }}
+              value: "https://{{ $host }}"
+              {{- else }}
+              value: "http://{{ $host }}"
+              {{- end }}
+              {{- else }}
+              value: {{ .value | quote }}
+              {{- end }}
+            {{- end }}
+            {{- range .Values.karakeep.extraEnv }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ include "karakeep.secretName" . }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          {{- with .Values.karakeep.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+        # Chrome browser sidecar
+        - name: chrome
+          image: "{{ .Values.chrome.image.repository }}:{{ .Values.chrome.image.tag }}"
+          imagePullPolicy: {{ .Values.chrome.image.pullPolicy }}
+          args:
+            {{- range .Values.chrome.args }}
+            - {{ . | quote }}
+            {{- end }}
+          ports:
+            - name: debug
+              containerPort: {{ .Values.chrome.service.port }}
+              protocol: TCP
+          securityContext:
+            {{- toYaml .Values.chrome.securityContext | nindent 12 }}
+          {{- with .Values.chrome.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /json/version
+              port: debug
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /json/version
+              port: debug
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+        # MeiliSearch sidecar
+        - name: meilisearch
+          image: "{{ .Values.meilisearch.image.repository }}:{{ .Values.meilisearch.image.tag }}"
+          imagePullPolicy: {{ .Values.meilisearch.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.meilisearch.service.port }}
+              protocol: TCP
+          env:
+            {{- range .Values.meilisearch.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- range .Values.meilisearch.extraEnv }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          {{- if or .Values.secrets.create .Values.secrets.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ include "karakeep.secretName" . }}
+          {{- end }}
+          volumeMounts:
+            - name: meilisearch-data
+              mountPath: /meili_data
+          securityContext:
+            {{- toYaml .Values.meilisearch.securityContext | nindent 12 }}
+          {{- with .Values.meilisearch.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "karakeep.dataPvcName" . }}
+        - name: meilisearch-data
+          persistentVolumeClaim:
+            claimName: {{ include "karakeep.meilisearchPvcName" . }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        - name: meilisearch-data
+          emptyDir: {}
+        {{- end }}

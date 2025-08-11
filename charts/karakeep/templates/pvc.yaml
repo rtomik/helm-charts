@@ -1,0 +1,43 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "karakeep.dataPvcName" . }}
+  labels:
+    {{- include "karakeep.labels" . | nindent 4 }}
+    component: data
+spec:
+  accessModes:
+    - {{ .Values.persistence.data.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.data.size }}
+  {{- if .Values.persistence.data.storageClass }}
+  {{- if (eq "-" .Values.persistence.data.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.persistence.data.storageClass }}
+  {{- end }}
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "karakeep.meilisearchPvcName" . }}
+  labels:
+    {{- include "karakeep.labels" . | nindent 4 }}
+    component: meilisearch
+spec:
+  accessModes:
+    - {{ .Values.persistence.meilisearch.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.meilisearch.size }}
+  {{- if .Values.persistence.meilisearch.storageClass }}
+  {{- if (eq "-" .Values.persistence.meilisearch.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.persistence.meilisearch.storageClass }}
+  {{- end }}
+  {{- end }}
+{{- end }}

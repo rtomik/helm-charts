@@ -1,0 +1,170 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  fsGroup: 0
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Karakeep Web Application
+karakeep:
+  image:
+    repository: ghcr.io/karakeep-app/karakeep
+    tag: "0.26.0"
+    pullPolicy: IfNotPresent
+  
+  securityContext: {}
+  
+  env:
+    - name: DATA_DIR
+      value: "/data"
+    - name: MEILI_ADDR
+      value: "http://localhost:7700"
+    - name: BROWSER_WEB_URL
+      value: "http://localhost:9222"
+    - name: NEXTAUTH_SECRET
+      value: "changeme-generate-a-secure-random-string"
+    - name: NEXTAUTH_URL
+      value: "http://localhost:3000"
+  
+  extraEnv: []
+    # - name: OPENAI_API_KEY
+    #   valueFrom:
+    #     secretKeyRef:
+    #       name: karakeep-secrets
+    #       key: openai-api-key
+  
+  service:
+    port: 3000
+  
+  #resources:
+  #  limits:
+  #    cpu: 500m
+  #    memory: 1Gi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 256Mi
+
+## Chrome Browser Service
+chrome:
+  image:
+    repository: gcr.io/zenika-hub/alpine-chrome
+    tag: "124"
+    pullPolicy: IfNotPresent
+  
+  securityContext: {}
+  
+  args:
+    - --no-sandbox
+    - --disable-gpu
+    - --disable-dev-shm-usage
+    - --remote-debugging-address=0.0.0.0
+    - --remote-debugging-port=9222
+    - --hide-scrollbars
+  
+  service:
+    port: 9222
+  
+  #resources:
+  #  limits:
+  #    cpu: 500m
+  #    memory: 512Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+
+## MeiliSearch Service
+meilisearch:
+  image:
+    repository: getmeili/meilisearch
+    tag: "v1.13.3"
+    pullPolicy: IfNotPresent
+  
+  securityContext: {}
+  
+  env:
+    - name: MEILI_NO_ANALYTICS
+      value: "true"
+    - name: MEILI_MAX_INDEXING_MEMORY
+      value: "512MiB"
+    - name: MEILI_MAX_INDEXING_THREADS
+      value: "2"
+  
+  extraEnv: []
+  
+  service:
+    port: 7700
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 3000
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: karakeep.<domain.com>
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - karakeep.<domain.com>
+
+## Persistence settings
+persistence:
+  enabled: true
+  
+  # Karakeep data storage
+  data:
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+  
+  # MeiliSearch data storage
+  meilisearch:
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 2Gi
+
+## Secret configuration
+secrets:
+  # Set to true to create a secret for environment variables
+  create: false
+  # Name of existing secret to use
+  existingSecret: ""
+  # Environment variables to include in secret
+  env: {}
+    # NEXTAUTH_SECRET: "your-secure-random-string"
+    # OPENAI_API_KEY: "your-openai-api-key"
+    # MEILI_MASTER_KEY: "your-meilisearch-master-key"
