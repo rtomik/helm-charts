@@ -83,6 +83,28 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/karakeep-0.0.1/karakeep-0.0.1.tgz
     version: 0.0.1
+  mealie:
+  - apiVersion: v2
+    appVersion: v3.1.1
+    created: "2025-08-24T13:45:44.332587789Z"
+    description: Mealie helm chart for Kubernetes - Recipe management and meal planning
+    digest: 3902f00396fc48249d6d73be6850736418683ea87f0e64f14ac97ed77df97223
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipe-management
+    - meal-planning
+    - cooking
+    - mealie
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: mealie
+    sources:
+    - https://github.com/mealie-recipes/mealie
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/mealie-0.0.1/mealie-0.0.1.tgz
+    version: 0.0.1
   qbittorrent-vpn:
   - apiVersion: v2
     appVersion: 5.1.0
@@ -145,4 +167,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-08-11T09:26:46.728585612Z"
+generated: "2025-08-24T13:45:44.332604641Z"
