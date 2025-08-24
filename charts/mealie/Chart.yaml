@@ -1,0 +1,17 @@
+apiVersion: v2
+name: mealie
+description: Mealie helm chart for Kubernetes - Recipe management and meal planning
+type: application
+version: 0.0.1
+appVersion: "v3.1.1"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - recipe-management
+  - meal-planning
+  - cooking
+  - mealie
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/mealie-recipes/mealie

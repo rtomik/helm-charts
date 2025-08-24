@@ -1,0 +1,337 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mealie.fullname" . }}
+  labels:
+    {{- include "mealie.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "mealie.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "mealie.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 9000
+              protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+          {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- if .Values.postgresql.external.enabled }}
+            - name: DB_ENGINE
+              value: "postgres"
+            - name: POSTGRES_SERVER
+              value: {{ .Values.postgresql.external.host | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.postgresql.external.port | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.external.database | quote }}
+            - name: POSTGRES_USER
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.userKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.user | quote }}
+              {{- end }}
+            - name: POSTGRES_PASSWORD
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.passwordKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.password | quote }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.email.enabled }}
+            - name: SMTP_HOST
+              {{- if .Values.email.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.existingSecret }}
+                  key: "smtp-host"
+              {{- else }}
+              value: {{ .Values.email.host | quote }}
+              {{- end }}
+            - name: SMTP_PORT
+              value: {{ .Values.email.port | quote }}
+            - name: SMTP_FROM_NAME
+              value: {{ .Values.email.fromName | quote }}
+            - name: SMTP_AUTH_STRATEGY
+              value: {{ .Values.email.authStrategy | quote }}
+            - name: SMTP_FROM_EMAIL
+              value: {{ .Values.email.fromEmail | quote }}
+            {{- if and .Values.email.user (or (eq .Values.email.authStrategy "TLS") (eq .Values.email.authStrategy "SSL")) }}
+            - name: SMTP_USER
+              {{- if .Values.email.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.existingSecret }}
+                  key: {{ .Values.email.userKey }}
+              {{- else }}
+              value: {{ .Values.email.user | quote }}
+              {{- end }}
+            {{- end }}
+            {{- if and .Values.email.password (or (eq .Values.email.authStrategy "TLS") (eq .Values.email.authStrategy "SSL")) }}
+            - name: SMTP_PASSWORD
+              {{- if .Values.email.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.existingSecret }}
+                  key: {{ .Values.email.passwordKey }}
+              {{- else }}
+              value: {{ .Values.email.password | quote }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.ldap.enabled }}
+            - name: LDAP_AUTH_ENABLED
+              value: "true"
+            - name: LDAP_SERVER_URL
+              value: {{ .Values.ldap.serverUrl | quote }}
+            - name: LDAP_TLS_INSECURE
+              value: {{ .Values.ldap.tlsInsecure | quote }}
+            {{- if .Values.ldap.tlsCaCertFile }}
+            - name: LDAP_TLS_CACERTFILE
+              value: {{ .Values.ldap.tlsCaCertFile | quote }}
+            {{- end }}
+            - name: LDAP_ENABLE_STARTTLS
+              value: {{ .Values.ldap.enableStartTls | quote }}
+            - name: LDAP_BASE_DN
+              value: {{ .Values.ldap.baseDn | quote }}
+            {{- if .Values.ldap.queryBind }}
+            - name: LDAP_QUERY_BIND
+              value: {{ .Values.ldap.queryBind | quote }}
+            {{- end }}
+            {{- if .Values.ldap.queryPassword }}
+            - name: LDAP_QUERY_PASSWORD
+              {{- if .Values.ldap.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.ldap.existingSecret }}
+                  key: {{ .Values.ldap.passwordKey }}
+              {{- else }}
+              value: {{ .Values.ldap.queryPassword | quote }}
+              {{- end }}
+            {{- end }}
+            {{- if .Values.ldap.userFilter }}
+            - name: LDAP_USER_FILTER
+              value: {{ .Values.ldap.userFilter | quote }}
+            {{- end }}
+            {{- if .Values.ldap.adminFilter }}
+            - name: LDAP_ADMIN_FILTER
+              value: {{ .Values.ldap.adminFilter | quote }}
+            {{- end }}
+            - name: LDAP_ID_ATTRIBUTE
+              value: {{ .Values.ldap.idAttribute | quote }}
+            - name: LDAP_NAME_ATTRIBUTE
+              value: {{ .Values.ldap.nameAttribute | quote }}
+            - name: LDAP_MAIL_ATTRIBUTE
+              value: {{ .Values.ldap.mailAttribute | quote }}
+          {{- end }}
+          {{- if .Values.oidc.enabled }}
+            - name: OIDC_AUTH_ENABLED
+              value: "true"
+            - name: OIDC_SIGNUP_ENABLED
+              value: {{ .Values.oidc.signupEnabled | quote }}
+            - name: OIDC_CONFIGURATION_URL
+              value: {{ .Values.oidc.configurationUrl | quote }}
+            - name: OIDC_CLIENT_ID
+              {{- if .Values.oidc.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.existingSecret }}
+                  key: {{ .Values.oidc.clientIdKey }}
+              {{- else }}
+              value: {{ .Values.oidc.clientId | quote }}
+              {{- end }}
+            - name: OIDC_CLIENT_SECRET
+              {{- if .Values.oidc.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.existingSecret }}
+                  key: {{ .Values.oidc.clientSecretKey }}
+              {{- else }}
+              value: {{ .Values.oidc.clientSecret | quote }}
+              {{- end }}
+            {{- if .Values.oidc.userGroup }}
+            - name: OIDC_USER_GROUP
+              value: {{ .Values.oidc.userGroup | quote }}
+            {{- end }}
+            {{- if .Values.oidc.adminGroup }}
+            - name: OIDC_ADMIN_GROUP
+              value: {{ .Values.oidc.adminGroup | quote }}
+            {{- end }}
+            - name: OIDC_AUTO_REDIRECT
+              value: {{ .Values.oidc.autoRedirect | quote }}
+            - name: OIDC_PROVIDER_NAME
+              value: {{ .Values.oidc.providerName | quote }}
+            - name: OIDC_REMEMBER_ME
+              value: {{ .Values.oidc.rememberMe | quote }}
+            - name: OIDC_SIGNING_ALGORITHM
+              value: {{ .Values.oidc.signingAlgorithm | quote }}
+            - name: OIDC_USER_CLAIM
+              value: {{ .Values.oidc.userClaim | quote }}
+            - name: OIDC_NAME_CLAIM
+              value: {{ .Values.oidc.nameClaim | quote }}
+            - name: OIDC_GROUPS_CLAIM
+              value: {{ .Values.oidc.groupsClaim | quote }}
+            {{- if .Values.oidc.scopesOverride }}
+            - name: OIDC_SCOPES_OVERRIDE
+              value: {{ .Values.oidc.scopesOverride | quote }}
+            {{- end }}
+            {{- if .Values.oidc.tlsCaCertFile }}
+            - name: OIDC_TLS_CACERTFILE
+              value: {{ .Values.oidc.tlsCaCertFile | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.openai.enabled }}
+            {{- if .Values.openai.baseUrl }}
+            - name: OPENAI_BASE_URL
+              value: {{ .Values.openai.baseUrl | quote }}
+            {{- end }}
+            - name: OPENAI_API_KEY
+              {{- if .Values.openai.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openai.existingSecret }}
+                  key: {{ .Values.openai.apiKeyKey }}
+              {{- else }}
+              value: {{ .Values.openai.apiKey | quote }}
+              {{- end }}
+            - name: OPENAI_MODEL
+              value: {{ .Values.openai.model | quote }}
+            {{- if .Values.openai.customHeaders }}
+            - name: OPENAI_CUSTOM_HEADERS
+              value: {{ .Values.openai.customHeaders | quote }}
+            {{- end }}
+            {{- if .Values.openai.customParams }}
+            - name: OPENAI_CUSTOM_PARAMS
+              value: {{ .Values.openai.customParams | quote }}
+            {{- end }}
+            - name: OPENAI_ENABLE_IMAGE_SERVICES
+              value: {{ .Values.openai.enableImageServices | quote }}
+            - name: OPENAI_WORKERS
+              value: {{ .Values.openai.workers | quote }}
+            - name: OPENAI_SEND_DATABASE_DATA
+              value: {{ .Values.openai.sendDatabaseData | quote }}
+            - name: OPENAI_REQUEST_TIMEOUT
+              value: {{ .Values.openai.requestTimeout | quote }}
+          {{- end }}
+          {{- if .Values.tls.enabled }}
+            {{- if .Values.tls.existingSecret }}
+            - name: TLS_CERTIFICATE_PATH
+              value: "/app/certs/{{ .Values.tls.certificateKey }}"
+            - name: TLS_PRIVATE_KEY_PATH
+              value: "/app/certs/{{ .Values.tls.privateKeyKey }}"
+            {{- else }}
+            - name: TLS_CERTIFICATE_PATH
+              value: {{ .Values.tls.certificatePath | quote }}
+            - name: TLS_PRIVATE_KEY_PATH
+              value: {{ .Values.tls.privateKeyPath | quote }}
+            {{- end }}
+          {{- end }}
+          {{- range $key, $value := .Values.theme.light }}
+            - name: THEME_LIGHT_{{ $key | upper }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- range $key, $value := .Values.theme.dark }}
+            - name: THEME_DARK_{{ $key | upper }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            {{- if and .Values.tls.enabled .Values.tls.existingSecret }}
+            - name: tls-certs
+              mountPath: /app/certs
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "mealie.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if and .Values.tls.enabled .Values.tls.existingSecret }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.tls.existingSecret }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
