@@ -1,0 +1,106 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "joplin-server.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "joplin-server.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "joplin-server.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "joplin-server.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Joplin Server is configured with:
+   - Database: PostgreSQL ({{ .Values.postgresql.external.host }}:{{ .Values.postgresql.external.port }}/{{ .Values.postgresql.external.database }})
+   - Storage: {{ .Values.joplin.storage.driver }}
+   {{- if eq .Values.joplin.storage.driver "filesystem" }}
+   - Data path: {{ .Values.joplin.storage.filesystemPath }}
+   {{- end }}
+   - User registration: {{ if .Values.joplin.server.enableUserRegistration }}enabled{{ else }}disabled{{ end }}
+   - Sharing: {{ if .Values.joplin.server.enableSharing }}enabled{{ else }}disabled{{ end }}
+
+{{- if and (eq .Values.joplin.storage.driver "filesystem") .Values.persistence.enabled }}
+3. Data is persisted using PVC: {{ include "joplin-server.fullname" . }}-data
+{{- else if eq .Values.joplin.storage.driver "filesystem" }}
+3. WARNING: No persistence enabled. Data will be lost when pods are restarted.
+{{- else }}
+3. Using {{ .Values.joplin.storage.driver }} storage - no local persistence needed.
+{{- end }}
+
+{{- if .Values.transcribe.enabled }}
+4. AI Transcription service is enabled:
+   - Transcribe service accessible internally at: {{ include "joplin-server.fullname" . }}-transcribe:{{ .Values.transcribe.service.port }}
+   {{- if .Values.transcribe.persistence.enabled }}
+   - Transcribe images stored in PVC: {{ include "joplin-server.fullname" . }}-transcribe-images
+   {{- end }}
+{{- end }}
+
+{{- if .Values.joplin.email.enabled }}
+5. Email notifications configured:
+   - SMTP host: {{ .Values.joplin.email.host }}:{{ .Values.joplin.email.port }}
+   - From: {{ .Values.joplin.email.fromName }} <{{ .Values.joplin.email.fromEmail }}>
+{{- end }}
+
+{{- if not .Values.joplin.admin.email }}
+
+6. IMPORTANT: First-time setup required!
+   After accessing the application, you'll need to create your first admin user.
+   Consider setting joplin.admin.email and joplin.admin.password for automated setup.
+{{- else }}
+
+6. Admin user configured:
+   - Email: {{ .Values.joplin.admin.email }}
+   {{- if .Values.joplin.admin.existingSecret }}
+   - Password: Retrieved from secret {{ .Values.joplin.admin.existingSecret }}
+   {{- else }}
+   - Password: Set in values (consider using existingSecret for production)
+   {{- end }}
+{{- end }}
+
+{{- if not .Values.postgresql.external.enabled }}
+
+7. WARNING: PostgreSQL database not configured!
+   Please configure postgresql.external settings to connect to your PostgreSQL database.
+   Joplin Server requires a PostgreSQL database to function.
+{{- else if and .Values.postgresql.external.enabled (not .Values.postgresql.external.existingSecret) }}
+
+7. SECURITY NOTE: Database credentials in plain text.
+   For production use, consider using postgresql.external.existingSecret to store database credentials securely.
+{{- end }}
+
+{{- $defaultHost := "joplin.domain.com" }}
+{{- $actualHost := "" }}
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+{{- $actualHost = .host }}
+{{- end }}
+{{- end }}
+{{- if and $actualHost (ne $actualHost $defaultHost) }}
+{{- if and .Values.probes.liveness.httpHeaders (len .Values.probes.liveness.httpHeaders) }}
+{{- $probeHost := "" }}
+{{- range .Values.probes.liveness.httpHeaders }}
+{{- if eq .name "Host" }}
+{{- $probeHost = .value }}
+{{- end }}
+{{- end }}
+{{- if eq $probeHost $defaultHost }}
+
+8. IMPORTANT: Health check configuration needs updating!
+   Your ingress host is "{{ $actualHost }}" but health checks are configured for "{{ $defaultHost }}".
+   Update probes.*.httpHeaders.Host value to match your domain for proper health checks.
+{{- end }}
+{{- end }}
+{{- end }}
+
+For more information about using this Helm chart, please refer to the readme.md file.

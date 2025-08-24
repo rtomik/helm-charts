@@ -1,0 +1,377 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "joplin-server.fullname" . }}
+  labels:
+    {{- include "joplin-server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "joplin-server.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "joplin-server.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 22300
+              protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+              {{- if .Values.probes.liveness.httpHeaders }}
+              httpHeaders:
+                {{- toYaml .Values.probes.liveness.httpHeaders | nindent 16 }}
+              {{- end }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+              {{- if .Values.probes.readiness.httpHeaders }}
+              httpHeaders:
+                {{- toYaml .Values.probes.readiness.httpHeaders | nindent 16 }}
+              {{- end }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+          {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- if .Values.postgresql.external.enabled }}
+            - name: POSTGRES_HOST
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.hostKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.host | quote }}
+              {{- end }}
+            - name: POSTGRES_PORT
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.portKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.port | quote }}
+              {{- end }}
+            - name: POSTGRES_DATABASE
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.databaseKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.database | quote }}
+              {{- end }}
+            - name: POSTGRES_USER
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.userKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.user | quote }}
+              {{- end }}
+            - name: POSTGRES_PASSWORD
+              {{- if .Values.postgresql.external.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret }}
+                  key: {{ .Values.postgresql.external.passwordKey }}
+              {{- else }}
+              value: {{ .Values.postgresql.external.password | quote }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.joplin.admin.email }}
+            - name: ADMIN_EMAIL
+              {{- if .Values.joplin.admin.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.admin.existingSecret }}
+                  key: {{ .Values.joplin.admin.emailKey }}
+              {{- else }}
+              value: {{ .Values.joplin.admin.email | quote }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.joplin.admin.password }}
+            - name: ADMIN_PASSWORD
+              {{- if .Values.joplin.admin.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.admin.existingSecret }}
+                  key: {{ .Values.joplin.admin.passwordKey }}
+              {{- else }}
+              value: {{ .Values.joplin.admin.password | quote }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.joplin.server.maxRequestBodySize }}
+            - name: MAX_REQUEST_BODY_SIZE
+              value: {{ .Values.joplin.server.maxRequestBodySize | quote }}
+          {{- end }}
+          {{- if .Values.joplin.server.sessionTimeout }}
+            - name: SESSION_TIMEOUT
+              value: {{ .Values.joplin.server.sessionTimeout | quote }}
+          {{- end }}
+            - name: ENABLE_USER_REGISTRATION
+              value: {{ .Values.joplin.server.enableUserRegistration | quote }}
+            - name: ENABLE_SHARING
+              value: {{ .Values.joplin.server.enableSharing | quote }}
+            - name: ENABLE_PUBLIC_NOTES
+              value: {{ .Values.joplin.server.enablePublicNotes | quote }}
+          {{- if eq .Values.joplin.storage.driver "filesystem" }}
+            - name: STORAGE_CONNECTION_STRING
+              value: "Type=Filesystem; Path={{ .Values.joplin.storage.filesystemPath }}"
+          {{- else if eq .Values.joplin.storage.driver "s3" }}
+            - name: STORAGE_CONNECTION_STRING
+              value: "Type=S3; Bucket={{ .Values.joplin.storage.s3.bucket }}; Region={{ .Values.joplin.storage.s3.region }}{{- if .Values.joplin.storage.s3.endpoint }}; Endpoint={{ .Values.joplin.storage.s3.endpoint }}{{- end }}"
+          {{- else }}
+            - name: STORAGE_CONNECTION_STRING
+              value: "Type=Database"
+          {{- end }}
+          {{- if and (eq .Values.joplin.storage.driver "s3") .Values.joplin.storage.s3.bucket }}
+            - name: AWS_ACCESS_KEY_ID
+              {{- if .Values.joplin.storage.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.storage.s3.existingSecret }}
+                  key: {{ .Values.joplin.storage.s3.accessKeyIdKey }}
+              {{- else }}
+              value: {{ .Values.joplin.storage.s3.accessKeyId | quote }}
+              {{- end }}
+            - name: AWS_SECRET_ACCESS_KEY
+              {{- if .Values.joplin.storage.s3.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.storage.s3.existingSecret }}
+                  key: {{ .Values.joplin.storage.s3.secretAccessKeyKey }}
+              {{- else }}
+              value: {{ .Values.joplin.storage.s3.secretAccessKey | quote }}
+              {{- end }}
+          {{- end }}
+          {{- if .Values.joplin.email.enabled }}
+            - name: SMTP_HOST
+              value: {{ .Values.joplin.email.host | quote }}
+            - name: SMTP_PORT
+              value: {{ .Values.joplin.email.port | quote }}
+            - name: SMTP_USERNAME
+              {{- if .Values.joplin.email.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.email.existingSecret }}
+                  key: {{ .Values.joplin.email.usernameKey }}
+              {{- else }}
+              value: {{ .Values.joplin.email.username | quote }}
+              {{- end }}
+            - name: SMTP_PASSWORD
+              {{- if .Values.joplin.email.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.joplin.email.existingSecret }}
+                  key: {{ .Values.joplin.email.passwordKey }}
+              {{- else }}
+              value: {{ .Values.joplin.email.password | quote }}
+              {{- end }}
+            - name: SMTP_FROM_EMAIL
+              value: {{ .Values.joplin.email.fromEmail | quote }}
+            - name: SMTP_FROM_NAME
+              value: {{ .Values.joplin.email.fromName | quote }}
+            - name: SMTP_SECURE
+              value: {{ .Values.joplin.email.secure | quote }}
+          {{- end }}
+          {{- if .Values.transcribe.enabled }}
+            - name: TRANSCRIBE_ENABLED
+              value: "true"
+            - name: TRANSCRIBE_API_KEY
+              {{- if .Values.transcribe.api.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.api.existingSecret }}
+                  key: {{ .Values.transcribe.api.keyName }}
+              {{- else }}
+              value: {{ .Values.transcribe.api.key | quote }}
+              {{- end }}
+            - name: TRANSCRIBE_BASE_URL
+              value: "http://{{ include "joplin-server.fullname" . }}-transcribe:{{ .Values.transcribe.service.port }}"
+          {{- end }}
+            - name: LOG_LEVEL
+              value: {{ .Values.joplin.logging.level | quote }}
+            - name: LOG_TARGET
+              value: {{ .Values.joplin.logging.target | quote }}
+          {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+          {{- if eq .Values.joplin.storage.driver "filesystem" }}
+            - name: data
+              mountPath: {{ .Values.joplin.storage.filesystemPath }}
+          {{- end }}
+          {{- if and .Values.security.tls.enabled .Values.security.tls.existingSecret }}
+            - name: tls-certs
+              mountPath: /app/certs
+              readOnly: true
+          {{- end }}
+          {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.transcribe.enabled }}
+        - name: transcribe
+          image: "{{ .Values.transcribe.image.repository }}:{{ .Values.transcribe.image.tag }}"
+          imagePullPolicy: {{ .Values.transcribe.image.pullPolicy }}
+          ports:
+            - name: transcribe
+              containerPort: 4567
+              protocol: TCP
+          env:
+            - name: APP_PORT
+              value: "4567"
+            - name: DB_CLIENT
+              value: "pg"
+            - name: API_KEY
+              {{- if .Values.transcribe.api.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.api.existingSecret }}
+                  key: {{ .Values.transcribe.api.keyName }}
+              {{- else }}
+              value: {{ .Values.transcribe.api.key | quote }}
+              {{- end }}
+            - name: HTR_CLI_IMAGES_FOLDER
+              value: {{ .Values.transcribe.htr.imagesFolder | quote }}
+            {{- if .Values.transcribe.database.host }}
+            - name: QUEUE_DATABASE_HOST
+              {{- if .Values.transcribe.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.database.existingSecret }}
+                  key: {{ .Values.transcribe.database.hostKey }}
+              {{- else }}
+              value: {{ .Values.transcribe.database.host | quote }}
+              {{- end }}
+            - name: QUEUE_DATABASE_PORT
+              {{- if .Values.transcribe.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.database.existingSecret }}
+                  key: {{ .Values.transcribe.database.portKey }}
+              {{- else }}
+              value: {{ .Values.transcribe.database.port | quote }}
+              {{- end }}
+            - name: QUEUE_DATABASE_NAME
+              {{- if .Values.transcribe.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.database.existingSecret }}
+                  key: {{ .Values.transcribe.database.databaseKey }}
+              {{- else }}
+              value: {{ .Values.transcribe.database.database | quote }}
+              {{- end }}
+            - name: QUEUE_DATABASE_USER
+              {{- if .Values.transcribe.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.database.existingSecret }}
+                  key: {{ .Values.transcribe.database.userKey }}
+              {{- else }}
+              value: {{ .Values.transcribe.database.user | quote }}
+              {{- end }}
+            - name: QUEUE_DATABASE_PASSWORD
+              {{- if .Values.transcribe.database.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.transcribe.database.existingSecret }}
+                  key: {{ .Values.transcribe.database.passwordKey }}
+              {{- else }}
+              value: {{ .Values.transcribe.database.password | quote }}
+              {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: transcribe-images
+              mountPath: {{ .Values.transcribe.htr.imagesFolder }}
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+        {{- end }}
+      volumes:
+      {{- if eq .Values.joplin.storage.driver "filesystem" }}
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "joplin-server.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- end }}
+      {{- if .Values.transcribe.enabled }}
+        - name: transcribe-images
+          {{- if .Values.transcribe.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "joplin-server.fullname" . }}-transcribe-images
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
+      {{- end }}
+      {{- if and .Values.security.tls.enabled .Values.security.tls.existingSecret }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.security.tls.existingSecret }}
+      {{- end }}
+      {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,267 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: joplin/server
+  tag: "3.4.2"
+  pullPolicy: IfNotPresent
+  
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 22300
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: joplin.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - joplin.domain.com
+
+## Resource limits and requests
+# resources:
+#   limits:
+#     cpu: 500m
+#     memory: 512Mi
+#   requests:
+#     cpu: 100m
+#     memory: 256Mi
+
+## Application health checks
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+    successThreshold: 1
+    path: /api/ping
+    # Host header for health checks to bypass origin validation
+    # Update this to match your actual domain
+    httpHeaders:
+      - name: Host
+        value: joplin.domain.com
+  readiness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+    path: /api/ping
+    # Host header for health checks to bypass origin validation
+    # Update this to match your actual domain
+    httpHeaders:
+      - name: Host
+        value: joplin.domain.com
+
+## Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+## Environment variables
+env:
+  # Application Settings
+  APP_PORT: "22300"
+  APP_BASE_URL: "http://localhost:22300"
+  
+  # Database Settings (PostgreSQL required)
+  DB_CLIENT: "pg"
+
+# Extra environment variables (for advanced use cases)
+extraEnv: []
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes 
+extraVolumes: []
+
+## PostgreSQL configuration (External database required)
+postgresql:
+  # External PostgreSQL settings (required)
+  external:
+    enabled: false
+    host: ""
+    port: 5432
+    database: "joplin"
+    user: "joplin"
+    password: ""
+    # Use existing secret for database credentials
+    existingSecret: ""
+    userKey: "username"
+    passwordKey: "password"
+    hostKey: "host"
+    portKey: "port"
+    databaseKey: "database"
+
+## Joplin Server Configuration
+joplin:
+  # Admin settings
+  admin:
+    # First admin user email (set during first setup)
+    email: ""
+    # First admin user password (set during first setup) 
+    password: ""
+    # Use existing secret for admin credentials
+    existingSecret: ""
+    emailKey: "admin-email"
+    passwordKey: "admin-password"
+  
+  # Server settings
+  server:
+    # Maximum request body size (in bytes)
+    maxRequestBodySize: "200mb"
+    # Session timeout in seconds
+    sessionTimeout: 86400
+    # Enable/disable user registration
+    enableUserRegistration: false
+    # Enable/disable sharing
+    enableSharing: true
+    # Enable/disable public notes
+    enablePublicNotes: true
+  
+  # Storage settings
+  storage:
+    # Storage driver: database, filesystem, s3, or azure
+    driver: "database"
+    # For filesystem storage (requires persistence)
+    filesystemPath: "/var/lib/joplin"
+    # For S3 storage (optional)
+    s3:
+      bucket: ""
+      region: ""
+      accessKeyId: ""
+      secretAccessKey: ""
+      endpoint: ""
+      # Use existing secret for S3 credentials
+      existingSecret: ""
+      accessKeyIdKey: "access-key-id"
+      secretAccessKeyKey: "secret-access-key"
+  
+  # Email settings (for user registration and notifications)
+  email:
+    enabled: false
+    host: ""
+    port: 587
+    username: ""
+    password: ""
+    fromEmail: ""
+    fromName: "Joplin Server"
+    # Use TLS/SSL
+    secure: true
+    # Use existing secret for email credentials
+    existingSecret: ""
+    usernameKey: "email-username"
+    passwordKey: "email-password"
+  
+  # Logging settings
+  logging:
+    level: "info"  # error, warn, info, debug
+    target: "console"  # console, file
+
+## Persistence settings (for filesystem storage)
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 3Gi
+  annotations: {}
+
+## Transcribe service (optional AI transcription)
+transcribe:
+  enabled: false
+  image:
+    repository: joplin/transcribe
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  # Transcribe API settings
+  api:
+    # Shared secret between Joplin Server and Transcribe service
+    key: ""
+    # Use existing secret for transcribe API key
+    existingSecret: ""
+    keyName: "transcribe-api-key"
+  
+  # Transcribe service settings
+  service:
+    type: ClusterIP
+    port: 4567
+  
+  # HTR CLI settings
+  htr:
+    # Images folder path
+    imagesFolder: "/app/images"
+  
+  # Transcribe persistence (for image storage)
+  persistence:
+    enabled: false
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    annotations: {}
+  
+  # Transcribe database (separate from main Joplin database)
+  database:
+    host: ""
+    port: 5432
+    database: "transcribe"
+    user: "transcribe"
+    password: ""
+    # Use existing secret for transcribe database credentials
+    existingSecret: ""
+    userKey: "username"
+    passwordKey: "password"
+    hostKey: "host"
+    portKey: "port"
+    databaseKey: "database"
+
+## Security settings
+security:
+  # Enable/disable HTTPS redirect
+  httpsRedirect: false
+  # Custom TLS certificate
+  tls:
+    enabled: false
+    # Use existing secret for TLS certificate
+    existingSecret: ""
+    certificateKey: "tls.crt"
+    privateKeyKey: "tls.key"

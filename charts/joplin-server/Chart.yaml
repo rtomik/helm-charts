@@ -1,0 +1,17 @@
+apiVersion: v2
+name: joplin-server
+description: Joplin Server helm chart for Kubernetes - Note-taking and synchronization server
+type: application
+version: 0.0.1
+appVersion: "3.4.2"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - notes
+  - synchronization
+  - joplin
+  - productivity
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/laurent22/joplin

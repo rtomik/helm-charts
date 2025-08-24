@@ -1,0 +1,44 @@
+{{- if and (eq .Values.joplin.storage.driver "filesystem") .Values.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "joplin-server.fullname" . }}-data
+  labels:
+    {{- include "joplin-server.labels" . | nindent 4 }}
+  {{- with .Values.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | quote }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+{{- end }}
+---
+{{- if and .Values.transcribe.enabled .Values.transcribe.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "joplin-server.fullname" . }}-transcribe-images
+  labels:
+    {{- include "joplin-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: transcribe
+  {{- with .Values.transcribe.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.transcribe.persistence.accessMode | quote }}
+  {{- if .Values.transcribe.persistence.storageClass }}
+  storageClassName: {{ .Values.transcribe.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.transcribe.persistence.size | quote }}
+{{- end }}
