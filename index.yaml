@@ -65,6 +65,28 @@ entries:
   joplin-server:
   - apiVersion: v2
     appVersion: 3.4.2
+    created: "2025-08-25T07:08:49.836391167Z"
+    description: Joplin Server helm chart for Kubernetes - Note-taking and synchronization
+      server
+    digest: ddda74db0e8932e9b8b99f36750247d32023f28f08b629a3f436e96e3fab176d
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - notes
+    - synchronization
+    - joplin
+    - productivity
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: joplin-server
+    sources:
+    - https://github.com/laurent22/joplin
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/joplin-server-0.0.2/joplin-server-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
+    appVersion: 3.4.2
     created: "2025-08-24T19:47:44.388111779Z"
     description: Joplin Server helm chart for Kubernetes - Note-taking and synchronization
       server
@@ -190,4 +212,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-08-24T19:47:44.388129713Z"
+generated: "2025-08-25T07:08:49.836410403Z"
