@@ -77,7 +77,7 @@ spec:
           {{- end }}
           {{- if .Values.postgresql.external.enabled }}
             - name: POSTGRES_HOST
-              {{- if .Values.postgresql.external.existingSecret }}
+              {{- if and .Values.postgresql.external.existingSecret .Values.postgresql.external.hostKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgresql.external.existingSecret }}
@@ -86,7 +86,7 @@ spec:
               value: {{ .Values.postgresql.external.host | quote }}
               {{- end }}
             - name: POSTGRES_PORT
-              {{- if .Values.postgresql.external.existingSecret }}
+              {{- if and .Values.postgresql.external.existingSecret .Values.postgresql.external.portKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgresql.external.existingSecret }}
@@ -95,7 +95,7 @@ spec:
               value: {{ .Values.postgresql.external.port | quote }}
               {{- end }}
             - name: POSTGRES_DATABASE
-              {{- if .Values.postgresql.external.existingSecret }}
+              {{- if and .Values.postgresql.external.existingSecret .Values.postgresql.external.databaseKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgresql.external.existingSecret }}
@@ -104,7 +104,7 @@ spec:
               value: {{ .Values.postgresql.external.database | quote }}
               {{- end }}
             - name: POSTGRES_USER
-              {{- if .Values.postgresql.external.existingSecret }}
+              {{- if and .Values.postgresql.external.existingSecret .Values.postgresql.external.userKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgresql.external.existingSecret }}
@@ -113,7 +113,7 @@ spec:
               value: {{ .Values.postgresql.external.user | quote }}
               {{- end }}
             - name: POSTGRES_PASSWORD
-              {{- if .Values.postgresql.external.existingSecret }}
+              {{- if and .Values.postgresql.external.existingSecret .Values.postgresql.external.passwordKey }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgresql.external.existingSecret }}

@@ -128,9 +128,10 @@ postgresql:
     existingSecret: ""
     userKey: "username"
     passwordKey: "password"
-    hostKey: "host"
-    portKey: "port"
-    databaseKey: "database"
+    # Optional: only set if host/port/database are also in the secret
+    hostKey: ""
+    portKey: ""
+    databaseKey: ""
 
 ## Joplin Server Configuration
 joplin:

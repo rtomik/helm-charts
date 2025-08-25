@@ -104,9 +104,9 @@ $ helm uninstall joplin-server
 | `postgresql.external.existingSecret`   | Name of existing secret with PostgreSQL credentials | `""`      |
 | `postgresql.external.userKey`          | Key in the secret for username               | `username` |
 | `postgresql.external.passwordKey`      | Key in the secret for password               | `password` |
-| `postgresql.external.hostKey`          | Key in the secret for host                   | `host`    |
-| `postgresql.external.portKey`          | Key in the secret for port                   | `port`    |
-| `postgresql.external.databaseKey`      | Key in the secret for database name          | `database` |
+| `postgresql.external.hostKey`          | Key in the secret for host (optional)        | `""`      |
+| `postgresql.external.portKey`          | Key in the secret for port (optional)        | `""`      |
+| `postgresql.external.databaseKey`      | Key in the secret for database name (optional) | `""`      |
 
 ### Joplin Server Configuration
 
@@ -308,6 +308,7 @@ joplin:
 
 ### Using Kubernetes Secrets
 
+#### Full Secret Configuration
 ```yaml
 postgresql:
   external:
@@ -324,6 +325,20 @@ joplin:
     existingSecret: "joplin-admin-secret"
     emailKey: "email"
     passwordKey: "password"
+```
+
+#### Mixed Configuration (Host in values, credentials in secret)
+```yaml
+postgresql:
+  external:
+    enabled: true
+    host: "postgres-cluster-pooler.dbs.svc.cluster.local"
+    port: 5432
+    database: "joplin-server"
+    existingSecret: "joplin-db-credentials"
+    userKey: "username"
+    passwordKey: "password"
+    # hostKey, portKey, databaseKey left empty - using values above
 ```
 
 ### S3 Storage Configuration

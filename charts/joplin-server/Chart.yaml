@@ -2,7 +2,7 @@ apiVersion: v2
 name: joplin-server
 description: Joplin Server helm chart for Kubernetes - Note-taking and synchronization server
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "3.4.2"
 maintainers:
   - name: Richard Tomik
