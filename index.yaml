@@ -150,6 +150,29 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/mealie-0.0.1/mealie-0.0.1.tgz
     version: 0.0.1
+  paperless-ngx:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2025-09-14T15:37:38.315542356Z"
+    description: Paperless-ngx helm chart for Kubernetes
+    digest: b643e87a7ae994a26476233489b3259375aef04925ff914c9038bd2ba38758a6
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - document-management
+    - paperless
+    - paperless-ngx
+    - ocr
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: paperless-ngx
+    sources:
+    - https://github.com/paperless-ngx/paperless-ngx
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/paperless-ngx-0.0.1/paperless-ngx-0.0.1.tgz
+    version: 0.0.1
   qbittorrent-vpn:
   - apiVersion: v2
     appVersion: 5.1.0
@@ -212,4 +235,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-08-25T07:08:49.836410403Z"
+generated: "2025-09-14T15:37:38.315563917Z"
