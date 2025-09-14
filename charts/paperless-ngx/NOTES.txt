@@ -1,0 +1,92 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "paperless-ngx.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "paperless-ngx.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "paperless-ngx.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "paperless-ngx.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8000 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:$CONTAINER_PORT
+{{- end }}
+
+2. Application is accessible at port {{ .Values.service.port }}
+
+3. Paperless-ngx is configured with:
+   - Database: PostgreSQL (external)
+   - Redis: External service
+   - OCR Language: {{ .Values.config.ocr.language }}
+   - Time Zone: {{ .Values.config.timeZone }}
+
+4. External Dependencies Required:
+   - PostgreSQL server: {{ include "paperless-ngx.postgresql.host" . }}:{{ include "paperless-ngx.postgresql.port" . }}
+   - Redis server: {{ include "paperless-ngx.redis.host" . }}:{{ include "paperless-ngx.redis.port" . }}
+
+{{- if or .Values.persistence.data.enabled .Values.persistence.media.enabled .Values.persistence.consume.enabled .Values.persistence.export.enabled }}
+5. Persistent Storage:
+{{- if .Values.persistence.data.enabled }}
+   - Data directory: {{ include "paperless-ngx.fullname" . }}-data ({{ .Values.persistence.data.size }})
+{{- end }}
+{{- if .Values.persistence.media.enabled }}
+   - Media directory: {{ include "paperless-ngx.fullname" . }}-media ({{ .Values.persistence.media.size }})
+{{- end }}
+{{- if .Values.persistence.consume.enabled }}
+   - Consume directory: {{ include "paperless-ngx.fullname" . }}-consume ({{ .Values.persistence.consume.size }})
+{{- end }}
+{{- if .Values.persistence.export.enabled }}
+   - Export directory: {{ include "paperless-ngx.fullname" . }}-export ({{ .Values.persistence.export.size }})
+{{- end }}
+{{- else }}
+5. WARNING: No persistent storage enabled. Data will be lost when pods are restarted.
+   Enable persistence in values.yaml for production use.
+{{- end }}
+
+{{- if .Values.config.admin.user }}
+6. Admin User: {{ .Values.config.admin.user }}
+   The admin user will be created automatically on first startup.
+{{- else }}
+6. No admin user configured. You'll need to create a superuser manually:
+   kubectl exec -it deployment/{{ include "paperless-ngx.fullname" . }} -- python manage.py createsuperuser
+{{- end }}
+
+{{- if or .Values.config.secretKey.existingSecret .Values.postgresql.external.existingSecret .Values.config.admin.existingSecret }}
+7. Using external secrets for sensitive information:
+{{- if .Values.config.secretKey.existingSecret }}
+   - Secret key from: {{ .Values.config.secretKey.existingSecret }}
+{{- end }}
+{{- if .Values.postgresql.external.existingSecret }}
+   - PostgreSQL password from: {{ .Values.postgresql.external.existingSecret }}
+{{- end }}
+{{- if .Values.config.admin.existingSecret }}
+   - Admin credentials from: {{ .Values.config.admin.existingSecret }}
+{{- end }}
+{{- else }}
+7. SECURITY NOTE: For production use, it's recommended to store sensitive data in Kubernetes Secrets.
+   - Set config.secretKey.existingSecret to use an external secret for the secret key
+   - Set postgresql.external.existingSecret to use an external secret for database credentials
+   - Set config.admin.existingSecret to use an external secret for admin credentials
+{{- end }}
+
+{{- if .Values.config.consumer.barcodes.enabled }}
+8. Barcode processing is enabled with scanner: {{ .Values.config.consumer.barcodeScanner }}
+{{- end }}
+
+{{- if .Values.config.tika.enabled }}
+9. Tika integration is enabled for Office document processing
+   - Tika endpoint: {{ .Values.config.tika.endpoint }}
+   - Gotenberg endpoint: {{ .Values.config.tika.gotenbergEndpoint }}
+{{- end }}
+
+For more information about using this Helm chart and Paperless-ngx configuration,
+please refer to the README.md file and the official Paperless-ngx documentation.

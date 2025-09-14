@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}-configmap
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+data:
+  # Additional configuration files can be added here if needed
+  # Most Paperless-ngx configuration is handled via environment variables
+  README.txt: |
+    This ConfigMap can be used to store additional configuration files
+    for Paperless-ngx if needed. The main configuration is handled via
+    environment variables in the deployment.

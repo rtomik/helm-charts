@@ -1,0 +1,90 @@
+{{- if .Values.persistence.data.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}-data
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+  {{- with .Values.persistence.data.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.data.accessMode | quote }}
+  {{- if .Values.persistence.data.storageClass }}
+  storageClassName: {{ .Values.persistence.data.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.data.size | quote }}
+---
+{{- end }}
+
+{{- if .Values.persistence.media.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}-media
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+  {{- with .Values.persistence.media.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.media.accessMode | quote }}
+  {{- if .Values.persistence.media.storageClass }}
+  storageClassName: {{ .Values.persistence.media.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.media.size | quote }}
+---
+{{- end }}
+
+{{- if .Values.persistence.export.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}-export
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+  {{- with .Values.persistence.export.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.export.accessMode | quote }}
+  {{- if .Values.persistence.export.storageClass }}
+  storageClassName: {{ .Values.persistence.export.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.export.size | quote }}
+---
+{{- end }}
+
+{{- if .Values.persistence.consume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}-consume
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+  {{- with .Values.persistence.consume.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.consume.accessMode | quote }}
+  {{- if .Values.persistence.consume.storageClass }}
+  storageClassName: {{ .Values.persistence.consume.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.consume.size | quote }}
+{{- end }}

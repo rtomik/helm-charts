@@ -1,0 +1,289 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: ghcr.io/paperless-ngx/paperless-ngx
+  tag: "2.18.4"
+  pullPolicy: IfNotPresent
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+# Note: Paperless-ngx uses s6-overlay which requires root access during initialization
+# The container will drop privileges after setup
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 8000
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: paperless.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - paperless.domain.com
+      # Optional: specify the name of an existing TLS secret
+      # secretName: "existing-tls-secret"
+
+## Persistence settings
+persistence:
+  # Paperless data directory (search index, classification model, etc.)
+  data:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  # Paperless media directory (documents and thumbnails)
+  media:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    annotations: {}
+  # Export directory (for exporting documents)
+  export:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  # Consume directory (for importing documents)
+  consume:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    annotations: {}
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes
+extraVolumes: []
+
+## Resource limits and requests
+# resources:
+#   limits:
+#     cpu: 1000m
+#     memory: 1Gi
+#   requests:
+#     cpu: 200m
+#     memory: 512Mi
+
+## Application health checks
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+    path: /
+  readiness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+    path: /
+
+## Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+## External Dependencies Configuration
+## These should point to external PostgreSQL and Redis services
+
+# External PostgreSQL database configuration
+postgresql:
+  # External PostgreSQL connection details
+  external:
+    enabled: true
+    host: "postgresql.default.svc.cluster.local"
+    port: 5432
+    database: "paperless"
+    username: "paperless"
+    # Use existingSecret for credentials
+    existingSecret: ""
+    passwordKey: "postgresql-password"
+    # Or set password directly (not recommended for production)
+    password: ""
+
+# External Redis configuration
+redis:
+  external:
+    enabled: true
+    host: "redis.default.svc.cluster.local"
+    port: 6379
+    database: 0
+    # Use existingSecret for credentials if Redis has auth
+    existingSecret: ""
+    passwordKey: "redis-password"
+    # Or set password directly (leave empty if no auth)
+    password: ""
+
+## Paperless-ngx Configuration
+config:
+  # Basic server configuration
+  url: ""  # Set to your external URL, e.g., https://paperless.domain.com
+  allowedHosts: "*"  # Comma-separated list of allowed hosts
+  csrfTrustedOrigins: ""  # Comma-separated list of trusted origins
+  corsAllowedHosts: "http://localhost:8000"
+  forceScriptName: ""  # For hosting under subpath, e.g., /paperless
+
+  # Security settings
+  secretKey:
+    # Use existingSecret for production
+    existingSecret: ""
+    secretKey: "secret-key"
+    # Or set directly (not recommended for production)
+    value: ""
+
+  # OCR Configuration
+  ocr:
+    language: "eng"  # OCR language (3-letter code)
+    mode: "skip"  # skip, redo, or force
+    skipArchiveFile: "never"  # never, with_text, always
+    clean: "clean"  # clean, clean-final, none
+    deskew: true
+    rotatePages: true
+    rotatePagesThreshold: 12
+    outputType: "pdfa"
+    pages: 0  # 0 = all pages
+    imageDpi: 0  # 0 = auto
+    maxImagePixels: 0  # 0 = use Pillow default
+    userArgs: "{}"  # JSON string of additional OCRmyPDF arguments
+
+  # Time and locale settings
+  timeZone: "UTC"
+
+  # Consumer settings
+  consumer:
+    recursive: false
+    subdirsAsTags: false
+    deleteDocumentDuplicates: false
+    ignorePatterns: '[".DS_Store", ".DS_STORE", "._*", ".stfolder/*", ".stversions/*", ".localized/*", "desktop.ini", "@eaDir/*", "Thumbs.db"]'
+    barcodeScanner: "PYZBAR"
+
+    # Barcode processing
+    barcodes:
+      enabled: false
+      tiffSupport: false
+      string: "PATCHT"
+      retainSplitPages: false
+      upscale: 0.0
+      dpi: 300
+      maxPages: 0
+
+      # ASN barcode settings
+      asnEnabled: false
+      asnPrefix: "ASN"
+
+      # Tag barcode settings
+      tagEnabled: false
+      tagMapping: '{"TAG:(.*)": "\\g<1>"}'
+
+  # Optional Tika settings (for Office documents)
+  tika:
+    enabled: false
+    endpoint: "http://tika:9998"
+    gotenbergEndpoint: "http://gotenberg:3000"
+
+  # Admin user creation (optional)
+  admin:
+    user: ""  # Set to create admin user on startup
+    password: ""  # Required if admin.user is set
+    email: "root@localhost"
+
+    # Use existingSecret for credentials
+    existingSecret: ""
+    userKey: "admin-user"
+    passwordKey: "admin-password"
+
+  # Email configuration (optional)
+  email:
+    host: ""
+    port: 25
+    user: ""
+    password: ""
+    from: ""
+    useTls: false
+    useSsl: false
+
+    # Use existingSecret for credentials
+    existingSecret: ""
+    userKey: "email-user"
+    passwordKey: "email-password"
+
+  # Logging
+  logging:
+    dir: ""  # Uses PAPERLESS_DATA_DIR/log/ if empty
+
+  # Task processing
+  taskWorkers: 1
+  threadsPerWorker: 1
+  workerTimeout: 1800
+
+  # Advanced settings
+  filenameFormat: ""
+  filenameFormatRemoveNone: false
+  enableNltk: true
+  convertMemoryLimit: 0
+  convertTmpDir: ""
+  maxImagePixels: 0
+
+# Environment variables
+env: []
+  # Example additional env vars:
+  # - name: PAPERLESS_ENABLE_HTTP_REMOTE_USER
+  #   value: "false"
+
+# Extra environment variables from secrets
+extraEnvFrom: []
+  # - secretRef:
+  #     name: paperless-extra-secrets
+
+# Extra environment variables (for advanced use cases)
+extraEnv: []

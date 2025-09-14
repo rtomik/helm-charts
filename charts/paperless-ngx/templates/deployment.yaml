@@ -1,0 +1,366 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "paperless-ngx.fullname" . }}
+  labels:
+    {{- include "paperless-ngx.labels" . | nindent 4 }}
+  annotations:
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "paperless-ngx.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "paperless-ngx.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+            # Required services
+            - name: PAPERLESS_REDIS
+              value: {{ include "paperless-ngx.redis.url" . | quote }}
+            - name: PAPERLESS_DBHOST
+              value: {{ include "paperless-ngx.postgresql.host" . | quote }}
+            - name: PAPERLESS_DBPORT
+              value: {{ include "paperless-ngx.postgresql.port" . | quote }}
+            - name: PAPERLESS_DBNAME
+              value: {{ .Values.postgresql.external.database | quote }}
+            - name: PAPERLESS_DBUSER
+              value: {{ .Values.postgresql.external.username | quote }}
+
+            # Database password from secret
+            - name: PAPERLESS_DBPASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.external.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
+                  key: {{ .Values.postgresql.external.passwordKey | default "postgresql-password" }}
+
+            # Security
+            - name: PAPERLESS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.secretKey.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
+                  key: {{ .Values.config.secretKey.secretKey | default "secret-key" }}
+
+            # Basic configuration
+            {{- if .Values.config.url }}
+            - name: PAPERLESS_URL
+              value: {{ .Values.config.url | quote }}
+            {{- end }}
+            - name: PAPERLESS_ALLOWED_HOSTS
+              value: {{ .Values.config.allowedHosts | quote }}
+            {{- if .Values.config.csrfTrustedOrigins }}
+            - name: PAPERLESS_CSRF_TRUSTED_ORIGINS
+              value: {{ .Values.config.csrfTrustedOrigins | quote }}
+            {{- end }}
+            - name: PAPERLESS_CORS_ALLOWED_HOSTS
+              value: {{ .Values.config.corsAllowedHosts | quote }}
+            {{- if .Values.config.forceScriptName }}
+            - name: PAPERLESS_FORCE_SCRIPT_NAME
+              value: {{ .Values.config.forceScriptName | quote }}
+            {{- end }}
+
+            # Paths
+            - name: PAPERLESS_DATA_DIR
+              value: "/usr/src/paperless/data"
+            - name: PAPERLESS_MEDIA_ROOT
+              value: "/usr/src/paperless/media"
+            - name: PAPERLESS_CONSUMPTION_DIR
+              value: "/usr/src/paperless/consume"
+
+            # Docker/User settings (s6-overlay compatible)
+            - name: USERMAP_UID
+              value: "1000"
+            - name: USERMAP_GID
+              value: "1000"
+
+            # OCR settings
+            - name: PAPERLESS_OCR_LANGUAGE
+              value: {{ .Values.config.ocr.language | quote }}
+            - name: PAPERLESS_OCR_MODE
+              value: {{ .Values.config.ocr.mode | quote }}
+            - name: PAPERLESS_OCR_SKIP_ARCHIVE_FILE
+              value: {{ .Values.config.ocr.skipArchiveFile | quote }}
+            - name: PAPERLESS_OCR_CLEAN
+              value: {{ .Values.config.ocr.clean | quote }}
+            - name: PAPERLESS_OCR_DESKEW
+              value: {{ .Values.config.ocr.deskew | quote }}
+            - name: PAPERLESS_OCR_ROTATE_PAGES
+              value: {{ .Values.config.ocr.rotatePages | quote }}
+            - name: PAPERLESS_OCR_ROTATE_PAGES_THRESHOLD
+              value: {{ .Values.config.ocr.rotatePagesThreshold | quote }}
+            - name: PAPERLESS_OCR_OUTPUT_TYPE
+              value: {{ .Values.config.ocr.outputType | quote }}
+            {{- if ne (.Values.config.ocr.pages | int) 0 }}
+            - name: PAPERLESS_OCR_PAGES
+              value: {{ .Values.config.ocr.pages | quote }}
+            {{- end }}
+            {{- if ne (.Values.config.ocr.imageDpi | int) 0 }}
+            - name: PAPERLESS_OCR_IMAGE_DPI
+              value: {{ .Values.config.ocr.imageDpi | quote }}
+            {{- end }}
+            {{- if ne (.Values.config.ocr.maxImagePixels | int) 0 }}
+            - name: PAPERLESS_OCR_MAX_IMAGE_PIXELS
+              value: {{ .Values.config.ocr.maxImagePixels | quote }}
+            {{- end }}
+            {{- if ne .Values.config.ocr.userArgs "{}" }}
+            - name: PAPERLESS_OCR_USER_ARGS
+              value: {{ .Values.config.ocr.userArgs | quote }}
+            {{- end }}
+
+            # Time and locale
+            - name: PAPERLESS_TIME_ZONE
+              value: {{ .Values.config.timeZone | quote }}
+
+            # Consumer settings
+            - name: PAPERLESS_CONSUMER_RECURSIVE
+              value: {{ .Values.config.consumer.recursive | quote }}
+            - name: PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS
+              value: {{ .Values.config.consumer.subdirsAsTags | quote }}
+            - name: PAPERLESS_CONSUMER_DELETE_DUPLICATES
+              value: {{ .Values.config.consumer.deleteDocumentDuplicates | quote }}
+            - name: PAPERLESS_CONSUMER_IGNORE_PATTERNS
+              value: {{ .Values.config.consumer.ignorePatterns | quote }}
+            - name: PAPERLESS_CONSUMER_BARCODE_SCANNER
+              value: {{ .Values.config.consumer.barcodeScanner | quote }}
+
+            # Barcode settings
+            {{- if .Values.config.consumer.barcodes.enabled }}
+            - name: PAPERLESS_CONSUMER_ENABLE_BARCODES
+              value: "true"
+            - name: PAPERLESS_CONSUMER_BARCODE_TIFF_SUPPORT
+              value: {{ .Values.config.consumer.barcodes.tiffSupport | quote }}
+            - name: PAPERLESS_CONSUMER_BARCODE_STRING
+              value: {{ .Values.config.consumer.barcodes.string | quote }}
+            - name: PAPERLESS_CONSUMER_BARCODE_RETAIN_SPLIT_PAGES
+              value: {{ .Values.config.consumer.barcodes.retainSplitPages | quote }}
+            {{- if ne (.Values.config.consumer.barcodes.upscale | float64) 0.0 }}
+            - name: PAPERLESS_CONSUMER_BARCODE_UPSCALE
+              value: {{ .Values.config.consumer.barcodes.upscale | quote }}
+            {{- end }}
+            - name: PAPERLESS_CONSUMER_BARCODE_DPI
+              value: {{ .Values.config.consumer.barcodes.dpi | quote }}
+            {{- if ne (.Values.config.consumer.barcodes.maxPages | int) 0 }}
+            - name: PAPERLESS_CONSUMER_BARCODE_MAX_PAGES
+              value: {{ .Values.config.consumer.barcodes.maxPages | quote }}
+            {{- end }}
+            {{- end }}
+
+            # ASN barcode settings
+            {{- if .Values.config.consumer.barcodes.asnEnabled }}
+            - name: PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE
+              value: "true"
+            - name: PAPERLESS_CONSUMER_ASN_BARCODE_PREFIX
+              value: {{ .Values.config.consumer.barcodes.asnPrefix | quote }}
+            {{- end }}
+
+            # Tag barcode settings
+            {{- if .Values.config.consumer.barcodes.tagEnabled }}
+            - name: PAPERLESS_CONSUMER_ENABLE_TAG_BARCODE
+              value: "true"
+            - name: PAPERLESS_CONSUMER_TAG_BARCODE_MAPPING
+              value: {{ .Values.config.consumer.barcodes.tagMapping | quote }}
+            {{- end }}
+
+            # Tika settings
+            {{- if .Values.config.tika.enabled }}
+            - name: PAPERLESS_TIKA_ENABLED
+              value: "true"
+            - name: PAPERLESS_TIKA_ENDPOINT
+              value: {{ .Values.config.tika.endpoint | quote }}
+            - name: PAPERLESS_TIKA_GOTENBERG_ENDPOINT
+              value: {{ .Values.config.tika.gotenbergEndpoint | quote }}
+            {{- end }}
+
+            # Admin user
+            {{- if .Values.config.admin.user }}
+            - name: PAPERLESS_ADMIN_USER
+              value: {{ .Values.config.admin.user | quote }}
+            - name: PAPERLESS_ADMIN_MAIL
+              value: {{ .Values.config.admin.email | quote }}
+            - name: PAPERLESS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.admin.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
+                  key: {{ .Values.config.admin.passwordKey | default "admin-password" }}
+            {{- end }}
+
+            # Email settings
+            {{- if .Values.config.email.host }}
+            - name: PAPERLESS_EMAIL_HOST
+              value: {{ .Values.config.email.host | quote }}
+            - name: PAPERLESS_EMAIL_PORT
+              value: {{ .Values.config.email.port | quote }}
+            {{- if .Values.config.email.user }}
+            - name: PAPERLESS_EMAIL_HOST_USER
+              value: {{ .Values.config.email.user | quote }}
+            - name: PAPERLESS_EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.email.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
+                  key: {{ .Values.config.email.passwordKey | default "email-password" }}
+            {{- end }}
+            {{- if .Values.config.email.from }}
+            - name: PAPERLESS_EMAIL_FROM
+              value: {{ .Values.config.email.from | quote }}
+            {{- end }}
+            - name: PAPERLESS_EMAIL_USE_TLS
+              value: {{ .Values.config.email.useTls | quote }}
+            - name: PAPERLESS_EMAIL_USE_SSL
+              value: {{ .Values.config.email.useSsl | quote }}
+            {{- end }}
+
+            # Task processing
+            - name: PAPERLESS_TASK_WORKERS
+              value: {{ .Values.config.taskWorkers | quote }}
+            - name: PAPERLESS_THREADS_PER_WORKER
+              value: {{ .Values.config.threadsPerWorker | quote }}
+            - name: PAPERLESS_WORKER_TIMEOUT
+              value: {{ .Values.config.workerTimeout | quote }}
+
+            # Advanced settings
+            - name: PAPERLESS_ENABLE_NLTK
+              value: {{ .Values.config.enableNltk | quote }}
+            {{- if .Values.config.filenameFormat }}
+            - name: PAPERLESS_FILENAME_FORMAT
+              value: {{ .Values.config.filenameFormat | quote }}
+            - name: PAPERLESS_FILENAME_FORMAT_REMOVE_NONE
+              value: {{ .Values.config.filenameFormatRemoveNone | quote }}
+            {{- end }}
+            {{- if ne (.Values.config.convertMemoryLimit | int) 0 }}
+            - name: PAPERLESS_CONVERT_MEMORY_LIMIT
+              value: {{ .Values.config.convertMemoryLimit | quote }}
+            {{- end }}
+            {{- if .Values.config.convertTmpDir }}
+            - name: PAPERLESS_CONVERT_TMPDIR
+              value: {{ .Values.config.convertTmpDir | quote }}
+            {{- end }}
+            {{- if ne (.Values.config.maxImagePixels | int) 0 }}
+            - name: PAPERLESS_MAX_IMAGE_PIXELS
+              value: {{ .Values.config.maxImagePixels | quote }}
+            {{- end }}
+
+            # Custom environment variables
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /usr/src/paperless/data
+            - name: media
+              mountPath: /usr/src/paperless/media
+            - name: export
+              mountPath: /usr/src/paperless/export
+            - name: consume
+              mountPath: /usr/src/paperless/consume
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.data.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "paperless-ngx.fullname" . }}-data
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.persistence.media.enabled }}
+        - name: media
+          persistentVolumeClaim:
+            claimName: {{ include "paperless-ngx.fullname" . }}-media
+        {{- else }}
+        - name: media
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.persistence.export.enabled }}
+        - name: export
+          persistentVolumeClaim:
+            claimName: {{ include "paperless-ngx.fullname" . }}-export
+        {{- else }}
+        - name: export
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.persistence.consume.enabled }}
+        - name: consume
+          persistentVolumeClaim:
+            claimName: {{ include "paperless-ngx.fullname" . }}-consume
+        {{- else }}
+        - name: consume
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
