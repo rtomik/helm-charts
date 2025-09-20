@@ -130,6 +130,27 @@ entries:
     version: 0.0.1
   mealie:
   - apiVersion: v2
+    appVersion: v3.2.1
+    created: "2025-09-20T17:32:03.081655195Z"
+    description: Mealie helm chart for Kubernetes - Recipe management and meal planning
+    digest: 5ecd223cdb9698fbfde993aa651a349b18354dbdd7103baa6dc900cb76c5daeb
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipe-management
+    - meal-planning
+    - cooking
+    - mealie
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: mealie
+    sources:
+    - https://github.com/mealie-recipes/mealie
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/mealie-0.0.2/mealie-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
     appVersion: v3.1.1
     created: "2025-08-24T13:45:44.332587789Z"
     description: Mealie helm chart for Kubernetes - Recipe management and meal planning
@@ -235,4 +256,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-09-14T15:37:38.315563917Z"
+generated: "2025-09-20T17:32:03.081677016Z"
