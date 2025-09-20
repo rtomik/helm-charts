@@ -2,8 +2,8 @@ apiVersion: v2
 name: mealie
 description: Mealie helm chart for Kubernetes - Recipe management and meal planning
 type: application
-version: 0.0.1
-appVersion: "v3.1.1"
+version: 0.0.2
+appVersion: "v3.2.1"
 maintainers:
   - name: Richard Tomik
     email: no@m.com

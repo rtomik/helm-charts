@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: ghcr.io/mealie-recipes/mealie
-  tag: "v3.1.1"
+  tag: "v3.2.1"
   pullPolicy: IfNotPresent
   
 ## Deployment settings
