@@ -75,3 +75,19 @@ data:
       user_info_url: {{ .Values.config.oauth2.user_info_url | default "" | quote }}
       redirect_url: {{ .Values.config.oauth2.redirect_url | default "" | quote }}
       name: {{ .Values.config.oauth2.name | default "" | quote }}
+    realtime:
+      max_connections: {{ .Values.config.realtime.max_connections }}
+      ping_interval: {{ .Values.config.realtime.ping_interval | quote }}
+      pong_wait: {{ .Values.config.realtime.pong_wait | quote }}
+      write_wait: {{ .Values.config.realtime.write_wait | quote }}
+      max_message_size: {{ .Values.config.realtime.max_message_size }}
+    logging:
+      level: {{ .Values.config.logging.level | quote }}
+      format: {{ .Values.config.logging.format | quote }}
+    storage:
+      type: {{ .Values.config.storage.type | quote }}
+      path: {{ .Values.config.storage.path | quote }}
+    features:
+      notifications: {{ .Values.config.features.notifications }}
+      realtime: {{ .Values.config.features.realtime }}
+      oauth: {{ .Values.config.features.oauth }}

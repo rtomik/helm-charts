@@ -5,8 +5,10 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: donetick/donetick
-  tag: "v0.1.38"
+  tag: "v0.1.60"
   pullPolicy: IfNotPresent
+
+imagePullSecrets: []
   
 ## Deployment settings
 replicaCount: 1
@@ -34,10 +36,14 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+## Pod annotations
+podAnnotations: {}
+
 ## Service settings
 service:
   type: ClusterIP
   port: 2021
+  annotations: {}
 
 ## Ingress settings
 ingress:
@@ -85,16 +91,28 @@ extraVolumeMounts: []
 extraVolumes: []
 
 ## Resource limits and requests
-# resources:
-#   limits:
-#     cpu: 500m
-#     memory: 512Mi
-#   requests:
-#     cpu: 100m
-#     memory: 128Mi
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
 
 ## Application health checks
 probes:
+  startup:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
+    path: /health
   liveness:
     enabled: true
     initialDelaySeconds: 30
@@ -208,3 +226,27 @@ config:
     user_info_url: ""
     redirect_url: ""
     name: ""
+
+  # Real-time configuration
+  realtime:
+    max_connections: 100
+    ping_interval: "30s"
+    pong_wait: "60s"
+    write_wait: "10s"
+    max_message_size: 512
+
+  # Logging configuration
+  logging:
+    level: "info"
+    format: "json"
+
+  # Storage configuration
+  storage:
+    type: "local"
+    path: "/donetick-data/uploads"
+
+  # Feature flags
+  features:
+    notifications: true
+    realtime: true
+    oauth: false
