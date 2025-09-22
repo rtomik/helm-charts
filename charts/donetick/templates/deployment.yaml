@@ -88,7 +88,7 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
           {{- end }}
-          {{- if or .Values.config.jwt.existingSecret .Values.config.oauth2.existingSecret .Values.config.database.existingSecret }}
+          {{- if or .Values.config.jwt.existingSecret .Values.config.oauth2.existingSecret .Values.config.database.secrets.existingSecret }}
             # Secret-based environment variables
             {{- if .Values.config.jwt.existingSecret }}
             - name: DT_JWT_SECRET
@@ -109,32 +109,17 @@ spec:
                   name: {{ .Values.config.oauth2.existingSecret }}
                   key: {{ .Values.config.oauth2.clientSecretKey }}
             {{- end }}
-            {{- if and .Values.config.database.existingSecret (eq .Values.config.database.type "postgres") }}
-            - name: DT_DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.config.database.existingSecret }}
-                  key: {{ .Values.config.database.hostKey }}
-            - name: DT_DB_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.config.database.existingSecret }}
-                  key: {{ .Values.config.database.portKey }}
+            {{- if and .Values.config.database.secrets.existingSecret (eq .Values.config.database.type "postgres") }}
             - name: DT_DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.config.database.existingSecret }}
-                  key: {{ .Values.config.database.userKey }}
+                  name: {{ .Values.config.database.secrets.existingSecret }}
+                  key: {{ .Values.config.database.secrets.userKey }}
             - name: DT_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.config.database.existingSecret }}
-                  key: {{ .Values.config.database.passwordKey }}
-            - name: DT_DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.config.database.existingSecret }}
-                  key: {{ .Values.config.database.nameKey }}
+                  name: {{ .Values.config.database.secrets.existingSecret }}
+                  key: {{ .Values.config.database.secrets.passwordKey }}
             {{- end }}
           {{- end }}
           {{- with .Values.extraEnv }}

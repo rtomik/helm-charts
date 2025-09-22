@@ -157,21 +157,17 @@ config:
     # Migration options
     migration_skip: false  # Set to true to skip database migrations
     migration_retry: 3     # Number of retries for failed migrations
-    
-    # These are only required for postgres - direct configuration
+
+    # These are only required for postgres
     host: ""
     port: 5432
-    user: ""
-    password: ""
     name: ""
-    
-    # Secret configuration for database credentials
-    existingSecret: ""        # Name of existing Kubernetes secret
-    hostKey: "db-host"        # Key in the secret for database host
-    portKey: "db-port"        # Key in the secret for database port
-    userKey: "db-user"        # Key in the secret for database user
-    passwordKey: "db-password" # Key in the secret for database password
-    nameKey: "db-name"        # Key in the secret for database name
+
+    # Secret configuration for postgres credentials
+    secrets:
+      existingSecret: ""        # Name of existing Kubernetes secret containing postgres credentials
+      userKey: "username"       # Key in the secret for database username
+      passwordKey: "password"   # Key in the secret for database password
   
   # Security settings
   # For production, use a generated secret and store in a Kubernetes Secret

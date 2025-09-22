@@ -23,14 +23,18 @@ data:
       migration_retry: {{ .Values.config.database.migration_retry }}
       {{- end }}
       {{- if eq .Values.config.database.type "postgres" }}
-      {{- if not .Values.config.database.existingSecret }}
+      {{- if not .Values.config.database.secrets.existingSecret }}
       host: {{ .Values.config.database.host | quote }}
       port: {{ .Values.config.database.port }}
       user: {{ .Values.config.database.user | quote }}
       password: {{ .Values.config.database.password | quote }}
       name: {{ .Values.config.database.name | quote }}
       {{- else }}
-      # Database credentials will be injected via environment variables from Secret
+      # Database host, port, and name from values, credentials from Secret
+      host: {{ .Values.config.database.host | quote }}
+      port: {{ .Values.config.database.port }}
+      name: {{ .Values.config.database.name | quote }}
+      # Username and password will be injected via environment variables from Secret
       {{- end }}
       {{- end }}
     jwt:

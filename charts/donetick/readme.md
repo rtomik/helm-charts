@@ -107,11 +107,18 @@ config:
     type: "postgres"
     host: "postgresql.database.svc.cluster.local"
     port: 5432
-    user: "donetick"
     name: "donetick"
-    # Use existing secret for database credentials
-    existingSecret: "donetick-db-secret"
-    passwordKey: "postgresql-password"
+
+  # Use existing secret for postgres credentials
+  database:
+    type: "postgres"
+    host: "postgresql.database.svc.cluster.local"
+    port: 5432
+    name: "donetick"
+    secrets:
+      existingSecret: "donetick-postgres-secret"
+      userKey: "username"
+      passwordKey: "password"
 
   # Use existing secret for JWT
   jwt:
@@ -179,9 +186,10 @@ ingress:
 Create the required secrets:
 
 ```bash
-# Database secret
-kubectl create secret generic donetick-db-secret \
-  --from-literal=postgresql-password='your-secure-db-password'
+# Postgres secret
+kubectl create secret generic donetick-postgres-secret \
+  --from-literal=username='donetick' \
+  --from-literal=password='your-secure-db-password'
 
 # JWT secret
 kubectl create secret generic donetick-jwt-secret \
@@ -234,12 +242,9 @@ helm uninstall donetick
 | `config.oauth2.existingSecret`         | Name of existing secret for OAuth2 credentials                    | `""`                |
 | `config.oauth2.clientIdKey`            | Key in the existing secret for OAuth2 client ID                   | `"client-id"`       |
 | `config.oauth2.clientSecretKey`        | Key in the existing secret for OAuth2 client secret               | `"client-secret"`   |
-| `config.database.existingSecret`       | Name of existing secret for database credentials                  | `""`                |
-| `config.database.hostKey`              | Key in the existing secret for database host                      | `"db-host"`         |
-| `config.database.portKey`              | Key in the existing secret for database port                      | `"db-port"`         |
-| `config.database.userKey`              | Key in the existing secret for database user                      | `"db-user"`         |
-| `config.database.passwordKey`          | Key in the existing secret for database password                  | `"db-password"`     |
-| `config.database.nameKey`              | Key in the existing secret for database name                      | `"db-name"`         |
+| `config.database.secrets.existingSecret` | Name of existing secret for postgres credentials                | `""`                |
+| `config.database.secrets.userKey`        | Key in the existing secret for postgres username                | `"username"`        |
+| `config.database.secrets.passwordKey`    | Key in the existing secret for postgres password                | `"password"`        |
 
 ### Deployment parameters
 
