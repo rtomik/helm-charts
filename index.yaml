@@ -3,6 +3,26 @@ entries:
   donetick:
   - apiVersion: v2
     appVersion: v0.1.60
+    created: "2025-10-11T12:29:42.89240886Z"
+    description: Donetick helm chart for Kubernetes
+    digest: 3fe3acaa51e3032e07461fee7908e9fc49bfa5d5cf345dc30fac0b3dc9ad9861
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - task-management
+    - donetick
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: donetick
+    sources:
+    - https://github.com/donetick/donetick
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/donetick-1.0.4/donetick-1.0.4.tgz
+    version: 1.0.4
+  - apiVersion: v2
+    appVersion: v0.1.60
     created: "2025-09-22T07:20:10.01319231Z"
     description: Donetick helm chart for Kubernetes
     digest: dd2236355c8ae50c58d16ebb24d3ebb2b5c0603db506a66ddef1ad0eca743f5c
@@ -296,4 +316,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-09-22T07:20:10.013216525Z"
+generated: "2025-10-11T12:29:42.892439979Z"
