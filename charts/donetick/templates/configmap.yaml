@@ -22,19 +22,18 @@ data:
       {{- if .Values.config.database.migration_retry }}
       migration_retry: {{ .Values.config.database.migration_retry }}
       {{- end }}
+      migration_timeout: {{ .Values.config.database.migration_timeout | default "300s" | quote }}
       {{- if eq .Values.config.database.type "postgres" }}
-      {{- if not .Values.config.database.secrets.existingSecret }}
       host: {{ .Values.config.database.host | quote }}
       port: {{ .Values.config.database.port }}
+      name: {{ .Values.config.database.name | quote }}
+      {{- if not .Values.config.database.secrets.existingSecret }}
       user: {{ .Values.config.database.user | quote }}
       password: {{ .Values.config.database.password | quote }}
-      name: {{ .Values.config.database.name | quote }}
       {{- else }}
-      # Database host, port, and name from values, credentials from Secret
-      host: {{ .Values.config.database.host | quote }}
-      port: {{ .Values.config.database.port }}
-      name: {{ .Values.config.database.name | quote }}
-      # Username and password will be injected via environment variables from Secret
+      # Reference environment variables for database credentials
+      user: "$DT_DATABASE_USER"
+      password: "$DT_DATABASE_PASSWORD"
       {{- end }}
       {{- end }}
     jwt:

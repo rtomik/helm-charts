@@ -107,10 +107,10 @@ resources: {}
 probes:
   startup:
     enabled: true
-    initialDelaySeconds: 10
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 30
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 15
+    failureThreshold: 80
     successThreshold: 1
     path: /health
   liveness:
@@ -157,6 +157,7 @@ config:
     # Migration options
     migration_skip: false  # Set to true to skip database migrations
     migration_retry: 3     # Number of retries for failed migrations
+    migration_timeout: "600s"  # Timeout for database migrations (default: 10 minutes)
 
     # These are only required for postgres
     host: ""

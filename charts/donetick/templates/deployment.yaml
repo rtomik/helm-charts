@@ -88,15 +88,44 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
           {{- end }}
-          {{- if or .Values.config.jwt.existingSecret .Values.config.oauth2.existingSecret .Values.config.database.secrets.existingSecret }}
-            # Secret-based environment variables
+            # Database configuration environment variables
+            {{- if eq .Values.config.database.type "postgres" }}
+            - name: DT_DATABASE_TYPE
+              value: "postgres"
+            - name: DT_DATABASE_HOST
+              value: {{ .Values.config.database.host | quote }}
+            - name: DT_DATABASE_PORT
+              value: {{ .Values.config.database.port | quote }}
+            - name: DT_DATABASE_NAME
+              value: {{ .Values.config.database.name | quote }}
+            {{- if .Values.config.database.secrets.existingSecret }}
+            - name: DT_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.secrets.existingSecret }}
+                  key: {{ .Values.config.database.secrets.userKey }}
+            - name: DT_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.database.secrets.existingSecret }}
+                  key: {{ .Values.config.database.secrets.passwordKey }}
+            {{- end }}
+            {{- else }}
+            - name: DT_DATABASE_TYPE
+              value: {{ .Values.config.database.type | quote }}
+            {{- end }}
+            # JWT configuration
             {{- if .Values.config.jwt.existingSecret }}
             - name: DT_JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.jwt.existingSecret }}
                   key: {{ .Values.config.jwt.secretKey }}
+            {{- else }}
+            - name: DT_JWT_SECRET
+              value: {{ .Values.config.jwt.secret | quote }}
             {{- end }}
+            # OAuth2 configuration
             {{- if .Values.config.oauth2.existingSecret }}
             - name: DT_OAUTH2_CLIENT_ID
               valueFrom:
@@ -109,19 +138,6 @@ spec:
                   name: {{ .Values.config.oauth2.existingSecret }}
                   key: {{ .Values.config.oauth2.clientSecretKey }}
             {{- end }}
-            {{- if and .Values.config.database.secrets.existingSecret (eq .Values.config.database.type "postgres") }}
-            - name: DT_DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.config.database.secrets.existingSecret }}
-                  key: {{ .Values.config.database.secrets.userKey }}
-            - name: DT_DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.config.database.secrets.existingSecret }}
-                  key: {{ .Values.config.database.secrets.passwordKey }}
-            {{- end }}
-          {{- end }}
           {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
