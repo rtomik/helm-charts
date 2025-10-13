@@ -166,9 +166,15 @@ config:
     existingSecret: "paperless-admin-secrets"
 
 postgresql:
+  # External PostgreSQL connection details
   external:
-    host: "postgresql.database.svc.cluster.local"
-    existingSecret: "paperless-db-secrets"
+    enabled: true
+    host: "postgres-cluster-pooler.dbs.svc.cluster.local"
+    port: 5432
+    database: "paperless"
+    username: "paperless"
+    # Use existingSecret for credentials
+    existingSecret: "paperless-db-credentials"
     passwordKey: "password"
 
 redis:
