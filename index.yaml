@@ -234,6 +234,28 @@ entries:
   paperless-ngx:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-10-26T17:28:45.582847258Z"
+    description: Paperless-ngx helm chart for Kubernetes
+    digest: 90a453be0cd5d51c6046a8a1b18b4adaff4f3625f074b34baa4693a53feccee3
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - document-management
+    - paperless
+    - paperless-ngx
+    - ocr
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: paperless-ngx
+    sources:
+    - https://github.com/paperless-ngx/paperless-ngx
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/paperless-ngx-0.0.2/paperless-ngx-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-09-14T15:37:38.315542356Z"
     description: Paperless-ngx helm chart for Kubernetes
     digest: b643e87a7ae994a26476233489b3259375aef04925ff914c9038bd2ba38758a6
@@ -316,4 +338,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-10-11T12:29:42.892439979Z"
+generated: "2025-10-26T17:28:45.582882513Z"
