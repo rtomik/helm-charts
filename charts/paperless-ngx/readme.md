@@ -32,6 +32,13 @@ Paperless-ngx requires PostgreSQL 11+ as its database backend. Ensure you have:
 Redis is required for background task processing. Ensure you have:
 - A Redis server accessible from the cluster
 - Connection details configured in values.yaml
+- Optional: Redis authentication credentials (username/password)
+- Optional: Redis key prefix for sharing one Redis server among multiple Paperless instances
+
+The chart supports all Redis authentication methods:
+- No authentication: `redis://host:port/database`
+- Password only (requirepass): `redis://:password@host:port/database`
+- Username and password (Redis 6.0+ ACL): `redis://username:password@host:port/database`
 
 ## Installing the Chart
 
@@ -86,6 +93,11 @@ The following table lists the configurable parameters and their default values.
 | `redis.external.host`                 | External Redis host                                                | `redis.default.svc.cluster.local`        |
 | `redis.external.port`                 | External Redis port                                                | `6379`                                    |
 | `redis.external.database`             | External Redis database number                                     | `0`                                       |
+| `redis.external.username`             | Redis username (Redis 6.0+ with ACL)                               | `""`                                      |
+| `redis.external.password`             | Redis password (leave empty if no auth required)                   | `""`                                      |
+| `redis.external.existingSecret`       | Existing secret with Redis credentials                             | `""`                                      |
+| `redis.external.passwordKey`          | Key in existing secret for Redis password                          | `redis-password`                          |
+| `redis.external.prefix`               | Prefix for Redis keys/channels (for multi-instance)                | `""`                                      |
 
 ### Security Configuration
 
@@ -180,6 +192,13 @@ postgresql:
 redis:
   external:
     host: "redis.cache.svc.cluster.local"
+    port: 6379
+    database: 0
+    # Use existingSecret for Redis credentials
+    existingSecret: "paperless-redis-credentials"
+    passwordKey: "password"
+    # Optional: Use prefix to share Redis among multiple instances
+    prefix: "paperless-prod"
 
 ingress:
   enabled: true
@@ -199,13 +218,63 @@ ingress:
 helm install paperless-ngx . -f values-production.yaml
 ```
 
+### Redis Authentication Examples
+
+#### Redis with Password Only (requirepass)
+
+```bash
+helm install paperless-ngx . \
+  --set redis.external.host=redis.example.com \
+  --set redis.external.password=myredispassword
+```
+
+Or with existing secret:
+
+```yaml
+redis:
+  external:
+    host: "redis.example.com"
+    existingSecret: "redis-auth-secret"
+    passwordKey: "redis-password"
+```
+
+#### Redis with Username and Password (Redis 6.0+ ACL)
+
+```bash
+helm install paperless-ngx . \
+  --set redis.external.host=redis.example.com \
+  --set redis.external.username=paperless-user \
+  --set redis.external.password=myredispassword
+```
+
+#### Multiple Paperless Instances on One Redis Server
+
+Use the `prefix` parameter to avoid key collisions:
+
+```yaml
+# Instance 1
+redis:
+  external:
+    host: "shared-redis.example.com"
+    password: "sharedpassword"
+    prefix: "paperless-prod"
+
+# Instance 2
+redis:
+  external:
+    host: "shared-redis.example.com"
+    password: "sharedpassword"
+    prefix: "paperless-staging"
+```
+
 ## Security Considerations
 
-1. **Use external secrets** for production deployments to store sensitive data like database passwords and the Django secret key.
+1. **Use external secrets** for production deployments to store sensitive data like database passwords, Redis passwords, and the Django secret key.
 2. **Set a proper PAPERLESS_URL** when exposing the application externally.
 3. **Configure ALLOWED_HOSTS** to restrict which hosts can access the application.
 4. **Use HTTPS** when exposing the application to the internet.
-5. **Container Security**: The container runs as root initially to allow s6-overlay to set up the runtime environment, then drops privileges to UID 1000. This is required for the Paperless-ngx Docker image to function properly.
+5. **Secure Redis**: Always use authentication (password or username/password) for Redis in production environments. Use `existingSecret` instead of plain text passwords.
+6. **Container Security**: The container runs as root initially to allow s6-overlay to set up the runtime environment, then drops privileges to UID 1000. This is required for the Paperless-ngx Docker image to function properly.
 
 ## Volumes and Data
 

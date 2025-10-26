@@ -90,10 +90,20 @@ Redis port
 
 {{/*
 Redis URL
+Constructs the Redis URL with optional authentication.
+Format: redis://[username]:[password]@host:port/database
 */}}
 {{- define "paperless-ngx.redis.url" -}}
 {{- $host := include "paperless-ngx.redis.host" . }}
 {{- $port := include "paperless-ngx.redis.port" . }}
 {{- $database := .Values.redis.external.database | toString }}
+{{- $username := .Values.redis.external.username | default "" }}
+{{- $password := .Values.redis.external.password | default "" }}
+{{- if and $username $password }}
+{{- printf "redis://%s:%s@%s:%s/%s" $username $password $host $port $database }}
+{{- else if $password }}
+{{- printf "redis://:%s@%s:%s/%s" $password $host $port $database }}
+{{- else }}
 {{- printf "redis://%s:%s/%s" $host $port $database }}
+{{- end }}
 {{- end }}

@@ -158,11 +158,16 @@ redis:
     host: "redis.default.svc.cluster.local"
     port: 6379
     database: 0
+    # Authentication (leave empty if Redis has no auth)
+    username: ""  # Optional: Redis username (Redis 6.0+)
     # Use existingSecret for credentials if Redis has auth
     existingSecret: ""
     passwordKey: "redis-password"
     # Or set password directly (leave empty if no auth)
     password: ""
+    # Optional: Prefix for Redis keys and channels
+    # Useful for sharing one Redis server among multiple Paperless instances
+    prefix: ""
 
 ## Paperless-ngx Configuration
 config:
