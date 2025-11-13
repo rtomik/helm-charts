@@ -69,6 +69,7 @@ persistence:
     accessMode: ReadWriteOnce
     size: 1Gi
     annotations: {}
+    #existingClaim: ""
   # Paperless media directory (documents and thumbnails)
   media:
     enabled: true
@@ -76,6 +77,7 @@ persistence:
     accessMode: ReadWriteOnce
     size: 10Gi
     annotations: {}
+    #existingClaim: ""
   # Export directory (for exporting documents)
   export:
     enabled: true
@@ -83,6 +85,7 @@ persistence:
     accessMode: ReadWriteOnce
     size: 1Gi
     annotations: {}
+    #existingClaim: ""
   # Consume directory (for importing documents)
   consume:
     enabled: true
@@ -90,6 +93,7 @@ persistence:
     accessMode: ReadWriteOnce
     size: 5Gi
     annotations: {}
+    #existingClaim: ""
 
 # Extra volume mounts
 extraVolumeMounts: []

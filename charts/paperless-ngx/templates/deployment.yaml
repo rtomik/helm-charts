@@ -324,7 +324,7 @@ spec:
         {{- if .Values.persistence.data.enabled }}
         - name: data
           persistentVolumeClaim:
-            claimName: {{ include "paperless-ngx.fullname" . }}-data
+            claimName: {{ .Values.persistence.data.existingClaim | default (printf "%s-data" (include "paperless-ngx.fullname" .)) }}
         {{- else }}
         - name: data
           emptyDir: {}
@@ -332,7 +332,7 @@ spec:
         {{- if .Values.persistence.media.enabled }}
         - name: media
           persistentVolumeClaim:
-            claimName: {{ include "paperless-ngx.fullname" . }}-media
+            claimName: {{ .Values.persistence.media.existingClaim | default (printf "%s-media" (include "paperless-ngx.fullname" .)) }}
         {{- else }}
         - name: media
           emptyDir: {}
@@ -340,7 +340,7 @@ spec:
         {{- if .Values.persistence.export.enabled }}
         - name: export
           persistentVolumeClaim:
-            claimName: {{ include "paperless-ngx.fullname" . }}-export
+            claimName: {{ .Values.persistence.export.existingClaim | default (printf "%s-export" (include "paperless-ngx.fullname" .)) }}
         {{- else }}
         - name: export
           emptyDir: {}
@@ -348,7 +348,7 @@ spec:
         {{- if .Values.persistence.consume.enabled }}
         - name: consume
           persistentVolumeClaim:
-            claimName: {{ include "paperless-ngx.fullname" . }}-consume
+            claimName: {{ .Values.persistence.consume.existingClaim | default (printf "%s-consume" (include "paperless-ngx.fullname" .)) }}
         {{- else }}
         - name: consume
           emptyDir: {}
