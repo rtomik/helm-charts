@@ -128,12 +128,16 @@ The following table lists the configurable parameters and their default values.
 |----------------------------------------|--------------------------------------------------------------------|---------------------|
 | `persistence.data.enabled`            | Enable persistence for data directory                             | `true`              |
 | `persistence.data.size`               | Size of data PVC                                                  | `1Gi`               |
+| `persistence.data.existingClaim`      | Name of existing PVC to use for data directory                    | `""`                |
 | `persistence.media.enabled`           | Enable persistence for media directory                            | `true`              |
 | `persistence.media.size`              | Size of media PVC                                                 | `10Gi`              |
+| `persistence.media.existingClaim`     | Name of existing PVC to use for media directory                   | `""`                |
 | `persistence.consume.enabled`         | Enable persistence for consume directory                          | `true`              |
 | `persistence.consume.size`            | Size of consume PVC                                               | `5Gi`               |
+| `persistence.consume.existingClaim`   | Name of existing PVC to use for consume directory                 | `""`                |
 | `persistence.export.enabled`          | Enable persistence for export directory                           | `true`              |
 | `persistence.export.size`             | Size of export PVC                                                | `1Gi`               |
+| `persistence.export.existingClaim`    | Name of existing PVC to use for export directory                  | `""`                |
 
 ### Service Parameters
 

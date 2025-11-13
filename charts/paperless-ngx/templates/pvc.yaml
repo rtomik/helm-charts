@@ -1,4 +1,4 @@
-{{- if .Values.persistence.data.enabled }}
+{{- if and .Values.persistence.data.enabled (not .Values.persistence.data.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -21,7 +21,7 @@ spec:
 ---
 {{- end }}
 
-{{- if .Values.persistence.media.enabled }}
+{{- if and .Values.persistence.media.enabled (not .Values.persistence.media.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -44,7 +44,7 @@ spec:
 ---
 {{- end }}
 
-{{- if .Values.persistence.export.enabled }}
+{{- if and .Values.persistence.export.enabled (not .Values.persistence.export.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -67,7 +67,7 @@ spec:
 ---
 {{- end }}
 
-{{- if .Values.persistence.consume.enabled }}
+{{- if and .Values.persistence.consume.enabled (not .Values.persistence.consume.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
