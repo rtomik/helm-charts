@@ -37,10 +37,11 @@ data:
       {{- end }}
       {{- end }}
     jwt:
-      {{- if .Values.config.jwt.existingSecret }}
-      # Secret will be injected from Secret
+      {{- if  .Values.config.jwt.secret }}
+      secret: {{ .Values.config.jwt.secret | quote }}      
       {{- else }}
-      secret: {{ .Values.config.jwt.secret | quote }}
+      ##Some value is needed otherwise env override won't work
+      secret: "dummyvalue" 
       {{- end }}
       session_time: {{ .Values.config.jwt.session_time | quote }}
       max_refresh: {{ .Values.config.jwt.max_refresh | quote }}
