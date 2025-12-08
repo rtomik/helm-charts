@@ -1,0 +1,18 @@
+apiVersion: v2
+name: tandoor
+description: Tandoor Recipes - A recipe management application for Kubernetes
+type: application
+version: 0.0.1
+appVersion: "2.3.5"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - recipes
+  - cooking
+  - meal-planning
+  - tandoor
+  - food
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/TandoorRecipes/recipes

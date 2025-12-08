@@ -1,0 +1,402 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tandoor.fullname" . }}
+  labels:
+    {{- include "tandoor.labels" . | nindent 4 }}
+  annotations:
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "tandoor.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "tandoor.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.config.tandoorPort }}
+              protocol: TCP
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+            # Database configuration
+            - name: DB_ENGINE
+              value: "django.db.backends.postgresql"
+            - name: POSTGRES_HOST
+              value: {{ include "tandoor.postgresql.host" . | quote }}
+            - name: POSTGRES_PORT
+              value: {{ include "tandoor.postgresql.port" . | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgresql.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresql.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.postgresql.passwordKey | default "postgresql-password" }}
+
+            # Security
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.secretKey.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.secretKey.secretKey | default "secret-key" }}
+            - name: ALLOWED_HOSTS
+              value: {{ .Values.config.allowedHosts | quote }}
+            {{- if .Values.config.csrfTrustedOrigins }}
+            - name: CSRF_TRUSTED_ORIGINS
+              value: {{ .Values.config.csrfTrustedOrigins | quote }}
+            {{- end }}
+            - name: CORS_ALLOW_ALL_ORIGINS
+              value: {{ ternary "1" "0" .Values.config.corsAllowOrigins | quote }}
+
+            # Server configuration
+            - name: TANDOOR_PORT
+              value: {{ .Values.config.tandoorPort | quote }}
+            - name: GUNICORN_WORKERS
+              value: {{ .Values.config.gunicornWorkers | quote }}
+            - name: GUNICORN_THREADS
+              value: {{ .Values.config.gunicornThreads | quote }}
+            - name: GUNICORN_TIMEOUT
+              value: {{ .Values.config.gunicornTimeout | quote }}
+            - name: GUNICORN_MEDIA
+              value: {{ .Values.config.gunicornMedia | quote }}
+
+            # URL configuration
+            {{- if .Values.config.scriptName }}
+            - name: SCRIPT_NAME
+              value: {{ .Values.config.scriptName | quote }}
+            {{- end }}
+
+            # Session cookie configuration
+            {{- if .Values.config.sessionCookieDomain }}
+            - name: SESSION_COOKIE_DOMAIN
+              value: {{ .Values.config.sessionCookieDomain | quote }}
+            {{- end }}
+            - name: SESSION_COOKIE_NAME
+              value: {{ .Values.config.sessionCookieName | quote }}
+
+            # Time and locale
+            - name: TZ
+              value: {{ .Values.config.timezone | quote }}
+
+            # Feature toggles
+            - name: ENABLE_SIGNUP
+              value: {{ ternary "1" "0" .Values.config.enableSignup | quote }}
+            - name: ENABLE_METRICS
+              value: {{ ternary "1" "0" .Values.config.enableMetrics | quote }}
+            - name: ENABLE_PDF_EXPORT
+              value: {{ ternary "1" "0" .Values.config.enablePdfExport | quote }}
+            - name: SORT_TREE_BY_NAME
+              value: {{ ternary "1" "0" .Values.config.sortTreeByName | quote }}
+
+            # Social authentication
+            - name: SOCIAL_DEFAULT_ACCESS
+              value: {{ .Values.config.socialDefaultAccess | quote }}
+            - name: SOCIAL_DEFAULT_GROUP
+              value: {{ .Values.config.socialDefaultGroup | quote }}
+            {{- if or .Values.config.socialProviders .Values.config.oidc.enabled }}
+            - name: SOCIAL_PROVIDERS
+              value: {{ .Values.config.socialProviders | default "allauth.socialaccount.providers.openid_connect" | quote }}
+            {{- end }}
+            {{- if .Values.config.socialAccountProviders }}
+            - name: SOCIALACCOUNT_PROVIDERS
+              value: {{ .Values.config.socialAccountProviders | quote }}
+            {{- end }}
+
+            # OpenID Connect / OAuth configuration (e.g., Authentik, Keycloak)
+            # Note: For production, consider using extraEnvFrom with a secret containing SOCIALACCOUNT_PROVIDERS
+            {{- if .Values.config.oidc.enabled }}
+            {{- $clientId := .Values.config.oidc.clientId }}
+            {{- $clientSecret := .Values.config.oidc.clientSecret }}
+            - name: SOCIALACCOUNT_PROVIDERS
+              value: '{"openid_connect":{"APPS":[{"provider_id":"{{ .Values.config.oidc.providerId }}","name":"{{ .Values.config.oidc.providerName }}","client_id":"{{ $clientId }}","secret":"{{ $clientSecret }}","settings":{"server_url":"{{ .Values.config.oidc.serverUrl }}"}}]}}'
+            {{- end }}
+
+            # Remote user authentication
+            - name: REMOTE_USER_AUTH
+              value: {{ ternary "1" "0" .Values.config.remoteUserAuth | quote }}
+
+            # LDAP configuration
+            {{- if .Values.config.ldap.enabled }}
+            - name: LDAP_AUTH
+              value: "1"
+            - name: AUTH_LDAP_SERVER_URI
+              value: {{ .Values.config.ldap.serverUri | quote }}
+            {{- if .Values.config.ldap.bindDn }}
+            - name: AUTH_LDAP_BIND_DN
+              value: {{ .Values.config.ldap.bindDn | quote }}
+            {{- end }}
+            {{- if or .Values.config.ldap.bindPassword .Values.config.ldap.existingSecret }}
+            - name: AUTH_LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.ldap.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.ldap.bindPasswordKey | default "ldap-bind-password" }}
+            {{- end }}
+            {{- if .Values.config.ldap.userSearchBaseDn }}
+            - name: AUTH_LDAP_USER_SEARCH_BASE_DN
+              value: {{ .Values.config.ldap.userSearchBaseDn | quote }}
+            {{- end }}
+            {{- if .Values.config.ldap.tlsCacertFile }}
+            - name: AUTH_LDAP_TLS_CACERTFILE
+              value: {{ .Values.config.ldap.tlsCacertFile | quote }}
+            {{- end }}
+            {{- if .Values.config.ldap.startTls }}
+            - name: AUTH_LDAP_START_TLS
+              value: "True"
+            {{- end }}
+            {{- end }}
+
+            # Email configuration
+            {{- if .Values.config.email.host }}
+            - name: EMAIL_HOST
+              value: {{ .Values.config.email.host | quote }}
+            - name: EMAIL_PORT
+              value: {{ .Values.config.email.port | quote }}
+            {{- if .Values.config.email.user }}
+            - name: EMAIL_HOST_USER
+              value: {{ .Values.config.email.user | quote }}
+            - name: EMAIL_HOST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.email.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.email.passwordKey | default "email-password" }}
+            {{- end }}
+            - name: EMAIL_USE_TLS
+              value: {{ ternary "1" "0" .Values.config.email.useTls | quote }}
+            - name: EMAIL_USE_SSL
+              value: {{ ternary "1" "0" .Values.config.email.useSsl | quote }}
+            - name: DEFAULT_FROM_EMAIL
+              value: {{ .Values.config.email.defaultFrom | quote }}
+            - name: ACCOUNT_EMAIL_SUBJECT_PREFIX
+              value: {{ .Values.config.email.accountEmailSubjectPrefix | quote }}
+            {{- end }}
+
+            # S3/Object storage configuration
+            {{- if .Values.config.s3.enabled }}
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.s3.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.s3.accessKeyKey | default "s3-access-key" }}
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.s3.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.s3.secretAccessKeyKey | default "s3-secret-access-key" }}
+            - name: S3_BUCKET_NAME
+              value: {{ .Values.config.s3.bucketName | quote }}
+            {{- if .Values.config.s3.regionName }}
+            - name: S3_REGION_NAME
+              value: {{ .Values.config.s3.regionName | quote }}
+            {{- end }}
+            {{- if .Values.config.s3.endpointUrl }}
+            - name: S3_ENDPOINT_URL
+              value: {{ .Values.config.s3.endpointUrl | quote }}
+            {{- end }}
+            {{- if .Values.config.s3.customDomain }}
+            - name: S3_CUSTOM_DOMAIN
+              value: {{ .Values.config.s3.customDomain | quote }}
+            {{- end }}
+            - name: S3_QUERYSTRING_AUTH
+              value: {{ ternary "1" "0" .Values.config.s3.querystringAuth | quote }}
+            - name: S3_QUERYSTRING_EXPIRE
+              value: {{ .Values.config.s3.querystringExpire | quote }}
+            {{- end }}
+
+            # AI features
+            {{- if .Values.config.ai.enabled }}
+            - name: SPACE_AI_ENABLED
+              value: "1"
+            - name: SPACE_AI_CREDITS_MONTHLY
+              value: {{ .Values.config.ai.creditsMonthly | quote }}
+            - name: AI_RATELIMIT
+              value: {{ .Values.config.ai.rateLimit | quote }}
+            {{- end }}
+
+            # Food Data Central API
+            - name: FDC_API_KEY
+              value: {{ .Values.config.fdcApiKey | quote }}
+
+            # External connectors
+            - name: DISABLE_EXTERNAL_CONNECTORS
+              value: {{ ternary "1" "0" .Values.config.disableExternalConnectors | quote }}
+            - name: EXTERNAL_CONNECTORS_QUEUE_SIZE
+              value: {{ .Values.config.externalConnectorsQueueSize | quote }}
+
+            # Rate limiting
+            {{- if .Values.config.ratelimitUrlImportRequests }}
+            - name: RATELIMIT_URL_IMPORT_REQUESTS
+              value: {{ .Values.config.ratelimitUrlImportRequests | quote }}
+            {{- end }}
+            - name: DRF_THROTTLE_RECIPE_URL_IMPORT
+              value: {{ .Values.config.drfThrottleRecipeUrlImport | quote }}
+
+            # Space defaults
+            - name: SPACE_DEFAULT_MAX_RECIPES
+              value: {{ .Values.config.spaceDefaultMaxRecipes | quote }}
+            - name: SPACE_DEFAULT_MAX_USERS
+              value: {{ .Values.config.spaceDefaultMaxUsers | quote }}
+            - name: SPACE_DEFAULT_MAX_FILES
+              value: {{ .Values.config.spaceDefaultMaxFiles | quote }}
+            - name: SPACE_DEFAULT_ALLOW_SHARING
+              value: {{ ternary "1" "0" .Values.config.spaceDefaultAllowSharing | quote }}
+
+            # User preference defaults
+            - name: FRACTION_PREF_DEFAULT
+              value: {{ ternary "1" "0" .Values.config.fractionPrefDefault | quote }}
+            - name: COMMENT_PREF_DEFAULT
+              value: {{ ternary "1" "0" .Values.config.commentPrefDefault | quote }}
+            - name: STICKY_NAV_PREF_DEFAULT
+              value: {{ ternary "1" "0" .Values.config.stickyNavPrefDefault | quote }}
+            - name: MAX_OWNED_SPACES_PREF_DEFAULT
+              value: {{ .Values.config.maxOwnedSpacesPrefDefault | quote }}
+
+            # Cosmetic
+            - name: UNAUTHENTICATED_THEME_FROM_SPACE
+              value: {{ .Values.config.unauthenticatedThemeFromSpace | quote }}
+            - name: FORCE_THEME_FROM_SPACE
+              value: {{ .Values.config.forceThemeFromSpace | quote }}
+
+            # Performance
+            - name: SHOPPING_MIN_AUTOSYNC_INTERVAL
+              value: {{ .Values.config.shoppingMinAutosyncInterval | quote }}
+            - name: EXPORT_FILE_CACHE_DURATION
+              value: {{ .Values.config.exportFileCacheDuration | quote }}
+
+            # Legal URLs
+            {{- if .Values.config.termsUrl }}
+            - name: TERMS_URL
+              value: {{ .Values.config.termsUrl | quote }}
+            {{- end }}
+            {{- if .Values.config.privacyUrl }}
+            - name: PRIVACY_URL
+              value: {{ .Values.config.privacyUrl | quote }}
+            {{- end }}
+            {{- if .Values.config.imprintUrl }}
+            - name: IMPRINT_URL
+              value: {{ .Values.config.imprintUrl | quote }}
+            {{- end }}
+
+            # hCaptcha
+            {{- if .Values.config.hcaptcha.siteKey }}
+            - name: HCAPTCHA_SITEKEY
+              value: {{ .Values.config.hcaptcha.siteKey | quote }}
+            - name: HCAPTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.hcaptcha.existingSecret | default (printf "%s-secrets" (include "tandoor.fullname" .)) }}
+                  key: {{ .Values.config.hcaptcha.secretKeyKey | default "hcaptcha-secret" }}
+            {{- end }}
+
+            # Debugging
+            - name: DEBUG
+              value: {{ ternary "1" "0" .Values.config.debug | quote }}
+            - name: DEBUG_TOOLBAR
+              value: {{ ternary "1" "0" .Values.config.debugToolbar | quote }}
+            - name: SQL_DEBUG
+              value: {{ ternary "1" "0" .Values.config.sqlDebug | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            - name: GUNICORN_LOG_LEVEL
+              value: {{ .Values.config.gunicornLogLevel | quote }}
+
+            # Custom environment variables
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: staticfiles
+              mountPath: /opt/recipes/staticfiles
+            - name: mediafiles
+              mountPath: /opt/recipes/mediafiles
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.staticfiles.enabled }}
+        - name: staticfiles
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.staticfiles.existingClaim | default (printf "%s-staticfiles" (include "tandoor.fullname" .)) }}
+        {{- else }}
+        - name: staticfiles
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.persistence.mediafiles.enabled }}
+        - name: mediafiles
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.mediafiles.existingClaim | default (printf "%s-mediafiles" (include "tandoor.fullname" .)) }}
+        {{- else }}
+        - name: mediafiles
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

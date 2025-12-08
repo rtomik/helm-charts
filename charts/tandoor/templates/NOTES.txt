@@ -1,0 +1,43 @@
+Tandoor Recipes has been deployed successfully!
+
+{{- if .Values.ingress.enabled }}
+
+Access Tandoor at:
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+{{- else if contains "NodePort" .Values.service.type }}
+
+Get the application URL by running:
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "tandoor.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+
+{{- else if contains "LoadBalancer" .Values.service.type }}
+
+Get the application URL by running:
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "tandoor.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+
+{{- else if contains "ClusterIP" .Values.service.type }}
+
+Access Tandoor by port-forwarding:
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "tandoor.fullname" . }} 8080:{{ .Values.service.port }}
+
+Then visit: http://localhost:8080
+
+{{- end }}
+
+IMPORTANT: This chart requires an external PostgreSQL database.
+Make sure your PostgreSQL database is configured and accessible at:
+  Host: {{ .Values.postgresql.host }}
+  Port: {{ .Values.postgresql.port }}
+  Database: {{ .Values.postgresql.database }}
+
+For more information, visit:
+  - Tandoor Documentation: https://docs.tandoor.dev/
+  - Configuration Reference: https://docs.tandoor.dev/system/configuration/

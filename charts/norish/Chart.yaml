@@ -1,0 +1,17 @@
+apiVersion: v2
+name: norish
+description: Norish helm chart for Kubernetes - A recipe management and meal planning application
+type: application
+version: 0.0.1
+appVersion: "v0.13.6-beta"
+maintainers:
+  - name: Richard Tomik
+    email: no@m.com
+keywords:
+  - recipe
+  - meal-planning
+  - food
+  - norish
+home: https://github.com/rtomik/helm-charts
+sources:
+  - https://github.com/norishapp/norish

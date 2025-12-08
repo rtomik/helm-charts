@@ -1,0 +1,229 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: norishapp/norish
+  tag: "v0.13.6-beta"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Pod annotations
+podAnnotations: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 3000
+  annotations: {}
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: norish.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - norish.domain.com
+      # Optional: specify the name of an existing TLS secret
+      # secretName: "existing-tls-secret"
+
+## Persistence settings
+persistence:
+  enabled: true
+  # Use an existing PVC instead of creating a new one
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  annotations: {}
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes
+extraVolumes: []
+
+## Resource limits and requests
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 500m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+## Application health checks
+probes:
+  startup:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+    successThreshold: 1
+    path: /
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+    path: /
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+    path: /
+
+## Application configuration
+config:
+  # Application URL (required)
+  # This should match your ingress hostname
+  authUrl: "http://norish.domain.com"
+
+  # Master encryption key (required)
+  # Generate with: openssl rand -base64 32
+  # For production, use an existing Kubernetes Secret
+  masterKey:
+    existingSecret: ""        # Name of existing Kubernetes secret
+    secretKey: "master-key"   # Key in the secret where master key is stored
+    value: ""                 # Only used if existingSecret is not set (must be 32-byte base64)
+
+  # Optional configuration
+  # Log level: trace, debug, info, warn, error, fatal
+  # Defaults to info in production, debug in development
+  logLevel: ""
+
+  # Additional trusted origins (comma-separated)
+  # Useful when behind a proxy or using multiple domains
+  # Example: "http://192.168.1.100:3000,https://norish.example.com"
+  trustedOrigins: ""
+
+  # Enable/disable password authentication
+  # Defaults to false if OIDC or OAuth is configured, true otherwise
+  passwordAuthEnabled: ""
+
+  # Authentication provider configuration
+  # Configure ONE provider for initial admin account creation
+  # After first login, manage additional providers via Settings → Admin
+  auth:
+    # OIDC/OAuth2 provider
+    oidc:
+      enabled: false
+      name: "MyAuth"
+      issuer: ""
+      clientId: ""
+      clientSecret: ""
+      # Optional: OIDC well-known configuration URL
+      # By default derived from issuer by appending /.well-known/openid-configuration
+      wellKnown: ""
+      # Use existing secret for OIDC credentials
+      existingSecret: ""
+      clientIdKey: "oidc-client-id"
+      clientSecretKey: "oidc-client-secret"
+
+    # GitHub OAuth
+    github:
+      enabled: false
+      clientId: ""
+      clientSecret: ""
+      # Use existing secret for GitHub credentials
+      existingSecret: ""
+      clientIdKey: "github-client-id"
+      clientSecretKey: "github-client-secret"
+
+    # Google OAuth
+    google:
+      enabled: false
+      clientId: ""
+      clientSecret: ""
+      # Use existing secret for Google credentials
+      existingSecret: ""
+      clientIdKey: "google-client-id"
+      clientSecretKey: "google-client-secret"
+
+## External PostgreSQL database configuration (REQUIRED)
+## Norish requires a central PostgreSQL database
+## You must have a PostgreSQL server available before deploying this chart
+database:
+  # Database connection details
+  host: ""                    # Required: PostgreSQL server hostname
+  port: 5432
+  name: norish
+  username: postgres
+  password: ""
+
+  # Use existing secret for database credentials (recommended for production)
+  existingSecret: ""          # Name of existing Kubernetes secret
+  usernameKey: "username"     # Key in the secret for database username
+  passwordKey: "password"     # Key in the secret for database password
+  databaseKey: "database"     # Key in the secret for database name (optional)
+  hostKey: ""             # Key in the secret for database host (optional)
+
+## Chrome Headless configuration (REQUIRED)
+## Required for improved recipe parsing and scraping
+chrome:
+  enabled: true
+  image:
+    repository: zenika/alpine-chrome
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  # Chrome port for remote debugging
+  port: 3000
+
+  # Chrome security context - requires specific capabilities
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    capabilities:
+      add:
+        - SYS_ADMIN
+
+  # Chrome resource limits
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 256Mi

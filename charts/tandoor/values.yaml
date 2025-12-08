@@ -1,0 +1,317 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: vabene1111/recipes
+  tag: "2.3.5"
+  pullPolicy: IfNotPresent
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+# Note: Tandoor runs nginx internally which requires root privileges
+# to write to /var/lib/nginx, /run/nginx, and /opt/recipes/http.d
+podSecurityContext:
+  fsGroup: 0
+
+containerSecurityContext:
+  runAsUser: 0
+  runAsGroup: 0
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 8080
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # Enable these for proper HTTP to HTTPS redirect (prevents Origin: null issues)
+    # traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
+  hosts:
+    - host: tandoor.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - tandoor.domain.com
+      # Optional: specify the name of an existing TLS secret
+      # secretName: "existing-tls-secret"
+
+## Persistence settings
+persistence:
+  # Tandoor static files directory
+  staticfiles:
+    enabled: true
+    # Use an existing PVC instead of creating a new one
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  # Tandoor media files directory (recipe images, etc.)
+  mediafiles:
+    enabled: true
+    # Use an existing PVC instead of creating a new one
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    annotations: {}
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes
+extraVolumes: []
+
+## Resource limits and requests
+# resources:
+#   limits:
+#     cpu: 1000m
+#     memory: 512Mi
+#   requests:
+#     cpu: 100m
+#     memory: 256Mi
+
+## Application health checks
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+    path: /
+  readiness:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    successThreshold: 1
+    path: /
+
+## Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+## External PostgreSQL database configuration
+## This chart does NOT include PostgreSQL - you must provide an external database
+postgresql:
+  host: "postgresql.default.svc.cluster.local"
+  port: 5432
+  database: "tandoor"
+  username: "tandoor"
+  # Use existingSecret for credentials (recommended for production)
+  existingSecret: ""
+  passwordKey: "postgresql-password"
+  # Or set password directly (not recommended for production)
+  password: ""
+
+## Tandoor Configuration
+## All settings based on official documentation: https://docs.tandoor.dev/system/configuration/
+config:
+  # Required: Secret key for Django cryptographic operations (at least 50 characters)
+  secretKey:
+    # Use existingSecret for production
+    existingSecret: ""
+    secretKey: "secret-key"
+    # Or set directly (not recommended for production)
+    value: ""
+
+  # Security setting to prevent HTTP Host Header Attacks
+  allowedHosts: "*"
+
+  # Allows setting origins to allow for unsafe requests (CSRF)
+  csrfTrustedOrigins: ""
+
+  # Enable cross-origin resource sharing
+  corsAllowOrigins: false
+
+  # Time and locale settings
+  timezone: "UTC"
+
+  # Server configuration
+  tandoorPort: 8080
+  gunicornWorkers: 3
+  gunicornThreads: 2
+  gunicornTimeout: 30
+  gunicornMedia: 0
+
+  # URL configuration (for reverse proxy setups)
+  # URL path base for subfolder deployments
+  scriptName: ""
+
+  # Session cookie configuration
+  sessionCookieDomain: ""
+  sessionCookieName: "sessionid"
+
+  # Feature toggles
+  enableSignup: false
+  enableMetrics: false
+  enablePdfExport: false
+  sortTreeByName: false
+
+  # Social authentication
+  socialDefaultAccess: 0
+  socialDefaultGroup: "guest"
+  socialProviders: ""
+  # For OpenID Connect providers (like Authentik), use the socialAccountProviders field
+  # or set via env for complex JSON configurations
+  socialAccountProviders: ""
+
+  # OpenID Connect / OAuth configuration (e.g., Authentik, Keycloak, etc.)
+  # For simple single-provider OIDC setup, configure here.
+  # For complex multi-provider setups or production with secrets, use env + extraEnvFrom.
+  oidc:
+    enabled: false
+    # Provider ID (e.g., "authentik", "keycloak")
+    providerId: "authentik"
+    # Display name shown on login page
+    providerName: "Authentik"
+    # Client ID from your OIDC provider
+    clientId: ""
+    # Client Secret from your OIDC provider (for production, use extraEnvFrom with a secret)
+    clientSecret: ""
+    # OpenID Connect well-known configuration URL
+    # e.g., https://authentik.company/application/o/<application_slug>/.well-known/openid-configuration
+    serverUrl: ""
+
+  # Remote user authentication
+  remoteUserAuth: false
+
+  # LDAP authentication (optional)
+  ldap:
+    enabled: false
+    serverUri: ""
+    bindDn: ""
+    bindPassword: ""
+    bindPasswordFile: ""
+    userSearchBaseDn: ""
+    tlsCacertFile: ""
+    startTls: false
+    existingSecret: ""
+    bindPasswordKey: "ldap-bind-password"
+
+  # Email configuration (optional)
+  email:
+    host: ""
+    port: 25
+    user: ""
+    password: ""
+    useTls: false
+    useSsl: false
+    defaultFrom: "webmaster@localhost"
+    accountEmailSubjectPrefix: "[Tandoor Recipes]"
+    existingSecret: ""
+    passwordKey: "email-password"
+
+  # S3/Object storage configuration (optional)
+  s3:
+    enabled: false
+    accessKey: ""
+    secretAccessKey: ""
+    bucketName: ""
+    regionName: ""
+    endpointUrl: ""
+    customDomain: ""
+    querystringAuth: true
+    querystringExpire: 3600
+    existingSecret: ""
+    accessKeyKey: "s3-access-key"
+    secretAccessKeyKey: "s3-secret-access-key"
+
+  # AI features (optional)
+  ai:
+    enabled: false
+    creditsMonthly: 100
+    rateLimit: "60/hour"
+
+  # Food Data Central API key for nutrition data
+  fdcApiKey: "DEMO_KEY"
+
+  # External connectors
+  disableExternalConnectors: false
+  externalConnectorsQueueSize: 100
+
+  # Rate limiting
+  ratelimitUrlImportRequests: ""
+  drfThrottleRecipeUrlImport: "60/hour"
+
+  # Space defaults
+  spaceDefaultMaxRecipes: 0
+  spaceDefaultMaxUsers: 0
+  spaceDefaultMaxFiles: 0
+  spaceDefaultAllowSharing: true
+
+  # User preference defaults
+  fractionPrefDefault: false
+  commentPrefDefault: true
+  stickyNavPrefDefault: true
+  maxOwnedSpacesPrefDefault: 100
+
+  # Cosmetic
+  unauthenticatedThemeFromSpace: 0
+  forceThemeFromSpace: 0
+
+  # Performance
+  shoppingMinAutosyncInterval: 5
+  exportFileCacheDuration: 600
+
+  # Legal URLs (optional)
+  termsUrl: ""
+  privacyUrl: ""
+  imprintUrl: ""
+
+  # hCaptcha (optional)
+  hcaptcha:
+    siteKey: ""
+    secret: ""
+    existingSecret: ""
+    secretKeyKey: "hcaptcha-secret"
+
+  # Debugging (not recommended for production)
+  debug: false
+  debugToolbar: false
+  sqlDebug: false
+  logLevel: "WARNING"
+  gunicornLogLevel: "info"
+
+# Environment variables (for additional configuration not covered above)
+# Use this for advanced configurations or settings not exposed in config section
+env: []
+  # Example: Custom environment variable
+  # - name: CUSTOM_VAR
+  #   value: "custom-value"
+  #
+  # Example: Complex SOCIALACCOUNT_PROVIDERS for multiple OIDC providers
+  # - name: SOCIAL_PROVIDERS
+  #   value: "allauth.socialaccount.providers.openid_connect"
+  # - name: SOCIALACCOUNT_PROVIDERS
+  #   value: '{"openid_connect":{"APPS":[{"provider_id":"authentik","name":"Authentik","client_id":"your-client-id","secret":"your-client-secret","settings":{"server_url":"https://authentik.company/application/o/tandoor/.well-known/openid-configuration"}}]}}'
+
+# Extra environment variables from secrets (recommended for sensitive data)
+extraEnvFrom: []
+  # - secretRef:
+  #     name: tandoor-extra-secrets

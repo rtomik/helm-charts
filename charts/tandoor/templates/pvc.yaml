@@ -1,0 +1,44 @@
+{{- if and .Values.persistence.staticfiles.enabled (not .Values.persistence.staticfiles.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tandoor.fullname" . }}-staticfiles
+  labels:
+    {{- include "tandoor.labels" . | nindent 4 }}
+  {{- with .Values.persistence.staticfiles.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.staticfiles.accessMode | quote }}
+  {{- if .Values.persistence.staticfiles.storageClass }}
+  storageClassName: {{ .Values.persistence.staticfiles.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.staticfiles.size | quote }}
+---
+{{- end }}
+
+{{- if and .Values.persistence.mediafiles.enabled (not .Values.persistence.mediafiles.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tandoor.fullname" . }}-mediafiles
+  labels:
+    {{- include "tandoor.labels" . | nindent 4 }}
+  {{- with .Values.persistence.mediafiles.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.mediafiles.accessMode | quote }}
+  {{- if .Values.persistence.mediafiles.storageClass }}
+  storageClassName: {{ .Values.persistence.mediafiles.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.mediafiles.size | quote }}
+{{- end }}

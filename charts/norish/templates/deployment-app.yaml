@@ -1,0 +1,279 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "norish.fullname" . }}
+  labels:
+    {{- include "norish.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+  annotations:
+    checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "norish.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "norish.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.startup.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            successThreshold: {{ .Values.probes.startup.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          env:
+            - name: AUTH_URL
+              value: {{ .Values.config.authUrl | quote }}
+            {{- if .Values.chrome.enabled }}
+            - name: CHROME_WS_ENDPOINT
+              value: "ws://localhost:{{ .Values.chrome.port }}"
+            {{- end }}
+            {{- if .Values.config.logLevel }}
+            - name: NEXT_PUBLIC_LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            {{- end }}
+            {{- if .Values.config.trustedOrigins }}
+            - name: TRUSTED_ORIGINS
+              value: {{ .Values.config.trustedOrigins | quote }}
+            {{- end }}
+            {{- if .Values.config.passwordAuthEnabled }}
+            - name: PASSWORD_AUTH_ENABLED
+              value: {{ .Values.config.passwordAuthEnabled | quote }}
+            {{- end }}
+            {{- if .Values.database.existingSecret }}
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.usernameKey }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.passwordKey }}
+            {{- if .Values.database.databaseKey }}
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.databaseKey }}
+            {{- else }}
+            - name: DB_NAME
+              value: {{ .Values.database.name | quote }}
+            {{- end }}
+            {{- if .Values.database.hostKey }}
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: {{ .Values.database.hostKey }}
+            {{- else }}
+            - name: DB_HOST
+              value: {{ .Values.database.host | quote }}
+            {{- end }}
+            - name: DB_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: DATABASE_URL
+              value: "postgres://$(DB_USERNAME):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            {{- else }}
+            - name: DATABASE_URL
+              value: {{ include "norish.databaseUrl" . | quote }}
+            {{- end }}
+            - name: MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.masterKey.existingSecret }}
+                  name: {{ .Values.config.masterKey.existingSecret }}
+                  key: {{ .Values.config.masterKey.secretKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: master-key
+                  {{- end }}
+            {{- if .Values.config.auth.oidc.enabled }}
+            - name: OIDC_NAME
+              value: {{ .Values.config.auth.oidc.name | quote }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.config.auth.oidc.issuer | quote }}
+            {{- if .Values.config.auth.oidc.wellKnown }}
+            - name: OIDC_WELLKNOWN
+              value: {{ .Values.config.auth.oidc.wellKnown | quote }}
+            {{- end }}
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.oidc.existingSecret }}
+                  name: {{ .Values.config.auth.oidc.existingSecret }}
+                  key: {{ .Values.config.auth.oidc.clientIdKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: oidc-client-id
+                  {{- end }}
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.oidc.existingSecret }}
+                  name: {{ .Values.config.auth.oidc.existingSecret }}
+                  key: {{ .Values.config.auth.oidc.clientSecretKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: oidc-client-secret
+                  {{- end }}
+            {{- end }}
+            {{- if .Values.config.auth.github.enabled }}
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.github.existingSecret }}
+                  name: {{ .Values.config.auth.github.existingSecret }}
+                  key: {{ .Values.config.auth.github.clientIdKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: github-client-id
+                  {{- end }}
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.github.existingSecret }}
+                  name: {{ .Values.config.auth.github.existingSecret }}
+                  key: {{ .Values.config.auth.github.clientSecretKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: github-client-secret
+                  {{- end }}
+            {{- end }}
+            {{- if .Values.config.auth.google.enabled }}
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.google.existingSecret }}
+                  name: {{ .Values.config.auth.google.existingSecret }}
+                  key: {{ .Values.config.auth.google.clientIdKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: google-client-id
+                  {{- end }}
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.config.auth.google.existingSecret }}
+                  name: {{ .Values.config.auth.google.existingSecret }}
+                  key: {{ .Values.config.auth.google.clientSecretKey }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: google-client-secret
+                  {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.chrome.enabled }}
+        - name: chrome-headless
+          image: "{{ .Values.chrome.image.repository }}:{{ .Values.chrome.image.tag }}"
+          imagePullPolicy: {{ .Values.chrome.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.chrome.securityContext | nindent 12 }}
+          ports:
+            - name: chrome
+              containerPort: {{ .Values.chrome.port }}
+              protocol: TCP
+          command:
+            - chromium-browser
+          args:
+            - "--no-sandbox"
+            - "--disable-gpu"
+            - "--disable-dev-shm-usage"
+            - "--remote-debugging-address=0.0.0.0"
+            - "--remote-debugging-port={{ .Values.chrome.port }}"
+            - "--headless"
+          resources:
+            {{- toYaml .Values.chrome.resources | nindent 12 }}
+        {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: uploads
+          persistentVolumeClaim:
+            {{- if .Values.persistence.existingClaim }}
+            claimName: {{ .Values.persistence.existingClaim }}
+            {{- else }}
+            claimName: {{ include "norish.fullname" . }}-uploads
+            {{- end }}
+        {{- else }}
+        - name: uploads
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
