@@ -231,6 +231,29 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/mealie-0.0.1/mealie-0.0.1.tgz
     version: 0.0.1
+  norish:
+  - apiVersion: v2
+    appVersion: v0.13.6-beta
+    created: "2025-12-08T16:03:08.591776383Z"
+    description: Norish helm chart for Kubernetes - A recipe management and meal planning
+      application
+    digest: 46e868403af3139834d5c8b604ca664b7afb00c592e8fafd2fd883e04249e2ad
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipe
+    - meal-planning
+    - food
+    - norish
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: norish
+    sources:
+    - https://github.com/norishapp/norish
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/norish-0.0.1/norish-0.0.1.tgz
+    version: 0.0.1
   paperless-ngx:
   - apiVersion: v2
     appVersion: latest
@@ -338,4 +361,27 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/recipya-0.0.1/recipya-0.0.1.tgz
     version: 0.0.1
-generated: "2025-10-26T17:28:45.582882513Z"
+  tandoor:
+  - apiVersion: v2
+    appVersion: 2.3.5
+    created: "2025-12-08T16:03:08.770752883Z"
+    description: Tandoor Recipes - A recipe management application for Kubernetes
+    digest: be976d7d0721821bdc34635aefd6492bb417a2726a90fa4f858c2e4b248a4105
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipes
+    - cooking
+    - meal-planning
+    - tandoor
+    - food
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: tandoor
+    sources:
+    - https://github.com/TandoorRecipes/recipes
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
+    version: 0.0.1
+generated: "2025-12-08T16:03:08.770786977Z"
