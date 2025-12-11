@@ -120,6 +120,18 @@ config:
   # This should match your ingress hostname
   authUrl: "http://norish.domain.com"
 
+  # Extra environment variables
+  # Example:
+  # extraEnv:
+  #   - name: MY_CUSTOM_VAR
+  #     value: "my-value"
+  #   - name: SECRET_VAR
+  #     valueFrom:
+  #       secretKeyRef:
+  #         name: my-secret
+  #         key: secret-key
+  extraEnv: []
+
   # Master encryption key (required)
   # Generate with: openssl rand -base64 32
   # For production, use an existing Kubernetes Secret

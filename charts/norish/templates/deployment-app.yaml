@@ -219,6 +219,9 @@ spec:
                   key: google-client-secret
                   {{- end }}
             {{- end }}
+            {{- with .Values.config.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: uploads
               mountPath: /app/uploads
