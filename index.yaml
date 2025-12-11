@@ -234,6 +234,28 @@ entries:
   norish:
   - apiVersion: v2
     appVersion: v0.13.6-beta
+    created: "2025-12-11T11:40:33.166127926Z"
+    description: Norish helm chart for Kubernetes - A recipe management and meal planning
+      application
+    digest: 825e537d9d3bf8002fb6404c0635d42abf7ef5b4fc295a2e7e89f6d028f95380
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - recipe
+    - meal-planning
+    - food
+    - norish
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: norish
+    sources:
+    - https://github.com/norishapp/norish
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/norish-0.0.2/norish-0.0.2.tgz
+    version: 0.0.2
+  - apiVersion: v2
+    appVersion: v0.13.6-beta
     created: "2025-12-08T16:03:08.591776383Z"
     description: Norish helm chart for Kubernetes - A recipe management and meal planning
       application
@@ -384,4 +406,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2025-12-08T16:03:08.770786977Z"
+generated: "2025-12-11T11:40:33.166195863Z"
