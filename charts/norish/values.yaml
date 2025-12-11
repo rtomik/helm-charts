@@ -209,7 +209,7 @@ chrome:
     pullPolicy: IfNotPresent
 
   # Chrome port for remote debugging
-  port: 3000
+  port: 9222
 
   # Chrome security context - requires specific capabilities
   securityContext:
