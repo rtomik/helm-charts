@@ -65,6 +65,7 @@ persistence:
   # Paperless data directory (search index, classification model, etc.)
   data:
     enabled: true
+    existingClaim: ""
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 1Gi
@@ -72,6 +73,7 @@ persistence:
   # Paperless media directory (documents and thumbnails)
   media:
     enabled: true
+    existingClaim: ""
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 10Gi
@@ -79,6 +81,7 @@ persistence:
   # Export directory (for exporting documents)
   export:
     enabled: true
+    existingClaim: ""
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 1Gi
@@ -86,6 +89,7 @@ persistence:
   # Consume directory (for importing documents)
   consume:
     enabled: true
+    existingClaim: ""
     storageClass: ""
     accessMode: ReadWriteOnce
     size: 5Gi

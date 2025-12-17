@@ -127,12 +127,16 @@ The following table lists the configurable parameters and their default values.
 | Name                                   | Description                                                        | Value               |
 |----------------------------------------|--------------------------------------------------------------------|---------------------|
 | `persistence.data.enabled`            | Enable persistence for data directory                             | `true`              |
+| `persistence.data.existingClaim`      | Use an existing PVC for data directory                            | `""`                |
 | `persistence.data.size`               | Size of data PVC                                                  | `1Gi`               |
 | `persistence.media.enabled`           | Enable persistence for media directory                            | `true`              |
+| `persistence.media.existingClaim`     | Use an existing PVC for media directory                           | `""`                |
 | `persistence.media.size`              | Size of media PVC                                                 | `10Gi`              |
 | `persistence.consume.enabled`         | Enable persistence for consume directory                          | `true`              |
+| `persistence.consume.existingClaim`   | Use an existing PVC for consume directory                         | `""`                |
 | `persistence.consume.size`            | Size of consume PVC                                               | `5Gi`               |
 | `persistence.export.enabled`          | Enable persistence for export directory                           | `true`              |
+| `persistence.export.existingClaim`    | Use an existing PVC for export directory                          | `""`                |
 | `persistence.export.size`             | Size of export PVC                                                | `1Gi`               |
 
 ### Service Parameters
@@ -286,6 +290,37 @@ Paperless-ngx uses several directories:
 - **Export directory**: Used for document exports
 
 All directories can be configured with separate PVCs and storage classes.
+
+### Using Existing PVCs
+
+The chart supports using existing PersistentVolumeClaims instead of creating new ones. This is useful for:
+- Migrating from an existing Paperless-ngx deployment
+- Using pre-provisioned storage with specific settings
+- Sharing volumes across deployments
+
+To use an existing PVC, specify the `existingClaim` parameter for the relevant volume:
+
+```yaml
+persistence:
+  data:
+    enabled: true
+    existingClaim: "my-existing-data-pvc"
+  media:
+    enabled: true
+    existingClaim: "my-existing-media-pvc"
+  export:
+    enabled: true
+    existingClaim: ""  # Will create new PVC
+  consume:
+    enabled: true
+    existingClaim: ""  # Will create new PVC
+```
+
+When `existingClaim` is specified:
+- The chart will **NOT** create a new PVC
+- The specified PVC must already exist in the same namespace
+- `storageClass`, `size`, and `accessMode` parameters are ignored for that volume
+- You can mix existing and new PVCs (some volumes with `existingClaim`, others without)
 
 ## Uninstalling the Chart
 
