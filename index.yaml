@@ -301,6 +301,28 @@ entries:
   paperless-ngx:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-12-17T15:14:19.979561503Z"
+    description: Paperless-ngx helm chart for Kubernetes
+    digest: 128cef6e4a4c33355428c59176c359796a83c3501c9f15e810179e0308f4455d
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - document-management
+    - paperless
+    - paperless-ngx
+    - ocr
+    maintainers:
+    - email: richard.tomik@proton.me
+      name: Richard Tomik
+    name: paperless-ngx
+    sources:
+    - https://github.com/paperless-ngx/paperless-ngx
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/paperless-ngx-0.0.3/paperless-ngx-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-10-26T17:28:45.582847258Z"
     description: Paperless-ngx helm chart for Kubernetes
     digest: 90a453be0cd5d51c6046a8a1b18b4adaff4f3625f074b34baa4693a53feccee3
@@ -450,4 +472,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2025-12-17T15:00:03.267147746Z"
+generated: "2025-12-17T15:14:19.979599293Z"
