@@ -222,6 +222,45 @@ gluetun:
     STATUS_FILE: "/tmp/gluetun-status.json"
 ```
 
+### Custom Sidecar Containers
+
+The chart supports adding custom sidecar containers to the pod. This is useful for adding additional functionality like port forwarding management (NATMap), monitoring, or other helper containers.
+
+Sidecars are specified using the standard Kubernetes container specification:
+
+```yaml
+sidecars:
+  - name: natmap
+    image: ghcr.io/muink/natmap:latest
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: GATEWAY
+        value: "10.2.0.1"
+      - name: INTERFACE
+        value: "tun0"
+      - name: INTERVAL
+        value: "30"
+    volumeMounts:
+      - name: config
+        mountPath: /config
+        subPath: natmap
+```
+
+**Common Use Cases:**
+
+1. **NATMap**: Automatically update port forwarding configurations
+2. **Monitoring**: Add monitoring agents or exporters
+3. **Custom Scripts**: Run periodic maintenance or update tasks
+
+**Sharing Volumes:**
+
+Sidecars can access the same volumes as the main containers:
+- `config`: qBittorrent configuration volume
+- `downloads`: Downloads volume
+- `gluetun-config`: Gluetun configuration volume (if enabled)
+
+For the full Kubernetes container specification reference, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core).
+
 ## Troubleshooting
 
 ### VPN Connection Issues

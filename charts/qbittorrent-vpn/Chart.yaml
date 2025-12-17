@@ -2,7 +2,7 @@ apiVersion: v2
 name: qbittorrent-vpn
 description: qBittorrent with Gluetun VPN sidecar for Kubernetes
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: 5.1.0
 maintainers:
   - name: Richard Tomik

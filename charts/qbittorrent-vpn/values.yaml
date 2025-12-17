@@ -226,3 +226,20 @@ extraVolumes: []
 # Temporary options for development/debugging
 hostNetwork: false
 initContainers: []
+
+# Additional sidecar containers
+# This allows you to add custom sidecar containers to the pod
+# Each sidecar is specified using standard Kubernetes container spec
+# Example: Add NATMap for port forwarding with VPN
+# sidecars:
+#   - name: natmap
+#     image: ghcr.io/muink/natmap:latest
+#     env:
+#       - name: GATEWAY
+#         value: "10.2.0.1"
+#       - name: INTERFACE
+#         value: "tun0"
+#     volumeMounts:
+#       - name: config
+#         mountPath: /config
+sidecars: []

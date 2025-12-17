@@ -255,7 +255,11 @@ spec:
           
           resources:
             {{- toYaml .Values.qbittorrent.resources | nindent 12 }}
-      
+
+        {{- with .Values.sidecars }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
       volumes:
         # Create /dev/net/tun as a device
         - name: tun
