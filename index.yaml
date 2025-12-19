@@ -3,6 +3,26 @@ entries:
   donetick:
   - apiVersion: v2
     appVersion: v0.1.60
+    created: "2025-12-19T08:00:40.907754382Z"
+    description: Donetick helm chart for Kubernetes
+    digest: 80dac9a72b49189c3142edc96c6da6777f11442b8bdeafd12c9bdd03c9175e94
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - task-management
+    - donetick
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: donetick
+    sources:
+    - https://github.com/donetick/donetick
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/donetick-1.0.5/donetick-1.0.5.tgz
+    version: 1.0.5
+  - apiVersion: v2
+    appVersion: v0.1.60
     created: "2025-10-11T12:29:42.89240886Z"
     description: Donetick helm chart for Kubernetes
     digest: 3fe3acaa51e3032e07461fee7908e9fc49bfa5d5cf345dc30fac0b3dc9ad9861
@@ -300,6 +320,28 @@ entries:
     version: 0.0.1
   paperless-ngx:
   - apiVersion: v2
+    appVersion: 2.20.3
+    created: "2025-12-19T08:00:41.057848966Z"
+    description: Paperless-ngx helm chart for Kubernetes
+    digest: badf4e22d33f2033f4051208ec977b2d90fb85d494833c193774837ea4665c6d
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - document-management
+    - paperless
+    - paperless-ngx
+    - ocr
+    maintainers:
+    - email: richard.tomik@proton.me
+      name: Richard Tomik
+    name: paperless-ngx
+    sources:
+    - https://github.com/paperless-ngx/paperless-ngx
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/paperless-ngx-0.0.4/paperless-ngx-0.0.4.tgz
+    version: 0.0.4
+  - apiVersion: v2
     appVersion: latest
     created: "2025-12-17T15:14:19.979561503Z"
     description: Paperless-ngx helm chart for Kubernetes
@@ -472,4 +514,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2025-12-17T15:14:19.979599293Z"
+generated: "2025-12-19T08:00:41.057922093Z"
