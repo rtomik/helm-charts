@@ -2,7 +2,7 @@ apiVersion: v2
 name: donetick
 description: Donetick helm chart for Kubernetes
 type: application
-version: 1.0.4
+version: 1.0.5
 appVersion: "v0.1.60"
 maintainers:
   - name: Richard Tomik

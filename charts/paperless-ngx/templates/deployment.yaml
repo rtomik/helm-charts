@@ -73,6 +73,16 @@ spec:
             - name: PAPERLESS_REDIS_PREFIX
               value: {{ .Values.redis.external.prefix | quote }}
             {{- end }}
+
+            # Redis password from secret (if configured)
+            {{- if or .Values.redis.external.existingSecret .Values.redis.external.password }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.external.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
+                  key: {{ .Values.redis.external.passwordKey | default "redis-password" }}
+            {{- end }}
+
             - name: PAPERLESS_DBHOST
               value: {{ include "paperless-ngx.postgresql.host" . | quote }}
             - name: PAPERLESS_DBPORT

@@ -37,11 +37,9 @@ data:
       {{- end }}
       {{- end }}
     jwt:
-      {{- if .Values.config.jwt.existingSecret }}
-      # Secret will be injected from Secret
-      {{- else }}
-      secret: {{ .Values.config.jwt.secret | quote }}
-      {{- end }}
+      # Placeholder value - actual secret injected via DT_JWT_SECRET env var
+      # This placeholder is required for environment variable overrides to work
+      secret: "placeholder"
       session_time: {{ .Values.config.jwt.session_time | quote }}
       max_refresh: {{ .Values.config.jwt.max_refresh | quote }}
     server:

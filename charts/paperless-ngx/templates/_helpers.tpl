@@ -92,17 +92,26 @@ Redis port
 Redis URL
 Constructs the Redis URL with optional authentication.
 Format: redis://[username]:[password]@host:port/database
+When existingSecret is configured, uses environment variable placeholder for password.
 */}}
 {{- define "paperless-ngx.redis.url" -}}
 {{- $host := include "paperless-ngx.redis.host" . }}
 {{- $port := include "paperless-ngx.redis.port" . }}
 {{- $database := .Values.redis.external.database | toString }}
 {{- $username := .Values.redis.external.username | default "" }}
-{{- $password := .Values.redis.external.password | default "" }}
-{{- if and $username $password }}
+{{- if .Values.redis.external.existingSecret }}
+  {{- if $username }}
+{{- printf "redis://%s:$REDIS_PASSWORD@%s:%s/%s" $username $host $port $database }}
+  {{- else }}
+{{- printf "redis://:$REDIS_PASSWORD@%s:%s/%s" $host $port $database }}
+  {{- end }}
+{{- else if .Values.redis.external.password }}
+  {{- $password := .Values.redis.external.password }}
+  {{- if $username }}
 {{- printf "redis://%s:%s@%s:%s/%s" $username $password $host $port $database }}
-{{- else if $password }}
+  {{- else }}
 {{- printf "redis://:%s@%s:%s/%s" $password $host $port $database }}
+  {{- end }}
 {{- else }}
 {{- printf "redis://%s:%s/%s" $host $port $database }}
 {{- end }}

@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: ghcr.io/paperless-ngx/paperless-ngx
-  tag: "2.18.4"
+  tag: "2.20.3"
   pullPolicy: IfNotPresent
 
 ## Deployment settings
