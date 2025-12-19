@@ -89,30 +89,42 @@ Redis port
 {{- end }}
 
 {{/*
-Redis URL
-Constructs the Redis URL with optional authentication.
-Format: redis://[username]:[password]@host:port/database
-When existingSecret is configured, uses environment variable placeholder for password.
+Redis URL (for non-authenticated Redis)
+Constructs the Redis URL without authentication.
+Format: redis://host:port/database
 */}}
-{{- define "paperless-ngx.redis.url" -}}
+{{- define "paperless-ngx.redis.url.noauth" -}}
+{{- $host := include "paperless-ngx.redis.host" . }}
+{{- $port := include "paperless-ngx.redis.port" . }}
+{{- $database := .Values.redis.external.database | toString }}
+{{- printf "redis://%s:%s/%s" $host $port $database }}
+{{- end }}
+
+{{/*
+Check if Redis authentication is configured
+Returns true if either existingSecret or password is set
+*/}}
+{{- define "paperless-ngx.redis.hasAuth" -}}
+{{- if or .Values.redis.external.existingSecret .Values.redis.external.password }}
+{{- "true" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Redis URL with authentication (for secret generation)
+Constructs the Redis URL with password interpolation for use in secrets.
+This uses the actual password value when building the secret.
+Format: redis://[username]:[password]@host:port/database
+*/}}
+{{- define "paperless-ngx.redis.url.withPassword" -}}
 {{- $host := include "paperless-ngx.redis.host" . }}
 {{- $port := include "paperless-ngx.redis.port" . }}
 {{- $database := .Values.redis.external.database | toString }}
 {{- $username := .Values.redis.external.username | default "" }}
-{{- if .Values.redis.external.existingSecret }}
-  {{- if $username }}
-{{- printf "redis://%s:$REDIS_PASSWORD@%s:%s/%s" $username $host $port $database }}
-  {{- else }}
-{{- printf "redis://:$REDIS_PASSWORD@%s:%s/%s" $host $port $database }}
-  {{- end }}
-{{- else if .Values.redis.external.password }}
-  {{- $password := .Values.redis.external.password }}
-  {{- if $username }}
+{{- $password := .Values.redis.external.password | default "" }}
+{{- if $username }}
 {{- printf "redis://%s:%s@%s:%s/%s" $username $password $host $port $database }}
-  {{- else }}
-{{- printf "redis://:%s@%s:%s/%s" $password $host $port $database }}
-  {{- end }}
 {{- else }}
-{{- printf "redis://%s:%s/%s" $host $port $database }}
+{{- printf "redis://:%s@%s:%s/%s" $password $host $port $database }}
 {{- end }}
 {{- end }}

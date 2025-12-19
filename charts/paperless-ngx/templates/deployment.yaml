@@ -67,20 +67,21 @@ spec:
           {{- end }}
           env:
             # Required services
+            {{- if include "paperless-ngx.redis.hasAuth" . }}
+            # When Redis has authentication, read the full URL from secret
             - name: PAPERLESS_REDIS
-              value: {{ include "paperless-ngx.redis.url" . | quote }}
-            {{- if .Values.redis.external.prefix }}
-            - name: PAPERLESS_REDIS_PREFIX
-              value: {{ .Values.redis.external.prefix | quote }}
-            {{- end }}
-
-            # Redis password from secret (if configured)
-            {{- if or .Values.redis.external.existingSecret .Values.redis.external.password }}
-            - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.redis.external.existingSecret | default (printf "%s-secrets" (include "paperless-ngx.fullname" .)) }}
-                  key: {{ .Values.redis.external.passwordKey | default "redis-password" }}
+                  key: {{ .Values.redis.external.urlKey | default "redis-url" }}
+            {{- else }}
+            # When Redis has no authentication, use the simple URL
+            - name: PAPERLESS_REDIS
+              value: {{ include "paperless-ngx.redis.url.noauth" . | quote }}
+            {{- end }}
+            {{- if .Values.redis.external.prefix }}
+            - name: PAPERLESS_REDIS_PREFIX
+              value: {{ .Values.redis.external.prefix | quote }}
             {{- end }}
 
             - name: PAPERLESS_DBHOST

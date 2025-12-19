@@ -165,9 +165,13 @@ redis:
     # Authentication (leave empty if Redis has no auth)
     username: ""  # Optional: Redis username (Redis 6.0+)
     # Use existingSecret for credentials if Redis has auth
+    # NOTE: When using existingSecret, the secret MUST contain a key with the full Redis URL
+    #       Format: redis://[username]:[password]@host:port/database
     existingSecret: ""
-    passwordKey: "redis-password"
+    urlKey: "redis-url"  # Key in existingSecret containing the full Redis URL
+    passwordKey: "redis-password"  # Key in existingSecret for password (for compatibility)
     # Or set password directly (leave empty if no auth)
+    # When using plain password, the full Redis URL will be auto-generated in the secret
     password: ""
     # Optional: Prefix for Redis keys and channels
     # Useful for sharing one Redis server among multiple Paperless instances
