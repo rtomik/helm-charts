@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: norishapp/norish
-  tag: "v0.13.6-beta"
+  tag: "v0.14.1-beta"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -210,6 +210,24 @@ database:
   passwordKey: "password"     # Key in the secret for database password
   databaseKey: "database"     # Key in the secret for database name (optional)
   hostKey: ""             # Key in the secret for database host (optional)
+
+## External Redis configuration (REQUIRED for v0.14.0+)
+## Redis is required for job queues and background tasks starting from v0.14.0-beta
+redis:
+  # Redis connection details
+  host: ""                    # Required: Redis server hostname
+  port: 6379
+  database: 0
+  # Authentication (leave empty if Redis has no auth)
+  username: ""                # Optional: Redis username (Redis 6.0+)
+  password: ""                # Redis password (leave empty if no auth)
+
+  # Use existing secret for Redis credentials (recommended for production)
+  # NOTE: When using existingSecret, the secret MUST contain a key with the full Redis URL
+  #       Format: redis://[username]:[password]@host:port/database
+  existingSecret: ""          # Name of existing Kubernetes secret
+  urlKey: "redis-url"         # Key in existingSecret containing the full Redis URL
+  passwordKey: "password"     # Key in existingSecret for password (for compatibility)
 
 ## Chrome Headless configuration (REQUIRED)
 ## Required for improved recipe parsing and scraping

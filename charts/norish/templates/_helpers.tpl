@@ -55,3 +55,43 @@ Database connection URL
 {{- $database := .Values.database.name }}
 {{- printf "postgres://%s:%s@%s:%d/%s" $username $password $host (int $port) $database }}
 {{- end }}
+
+{{/*
+Redis URL (for non-authenticated Redis)
+Constructs the Redis URL without authentication.
+Format: redis://host:port/database
+*/}}
+{{- define "norish.redis.url.noauth" -}}
+{{- $host := .Values.redis.host }}
+{{- $port := .Values.redis.port }}
+{{- $database := .Values.redis.database | toString }}
+{{- printf "redis://%s:%d/%s" $host (int $port) $database }}
+{{- end }}
+
+{{/*
+Check if Redis authentication is configured
+Returns true if either existingSecret or password is set
+*/}}
+{{- define "norish.redis.hasAuth" -}}
+{{- if or .Values.redis.existingSecret .Values.redis.password }}
+{{- "true" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Redis URL with authentication (for secret generation)
+Constructs the Redis URL with password interpolation for use in secrets.
+Format: redis://[username]:[password]@host:port/database
+*/}}
+{{- define "norish.redis.url.withPassword" -}}
+{{- $host := .Values.redis.host }}
+{{- $port := .Values.redis.port }}
+{{- $database := .Values.redis.database | toString }}
+{{- $username := .Values.redis.username | default "" }}
+{{- $password := .Values.redis.password | default "" }}
+{{- if $username }}
+{{- printf "redis://%s:%s@%s:%d/%s" $username $password $host (int $port) $database }}
+{{- else }}
+{{- printf "redis://:%s@%s:%d/%s" $password $host (int $port) $database }}
+{{- end }}
+{{- end }}

@@ -145,6 +145,16 @@ spec:
                   name: {{ include "norish.fullname" . }}-secret
                   key: master-key
                   {{- end }}
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.redis.existingSecret }}
+                  name: {{ .Values.redis.existingSecret }}
+                  key: {{ .Values.redis.urlKey | default "redis-url" }}
+                  {{- else }}
+                  name: {{ include "norish.fullname" . }}-secret
+                  key: redis-url
+                  {{- end }}
             {{- if .Values.config.auth.oidc.enabled }}
             - name: OIDC_NAME
               value: {{ .Values.config.auth.oidc.name | quote }}

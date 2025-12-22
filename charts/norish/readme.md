@@ -6,7 +6,7 @@ A Helm chart for deploying [Norish](https://github.com/norishapp/norish), a reci
 
 This chart bootstraps a Norish deployment on a Kubernetes cluster using the Helm package manager.
 
-**IMPORTANT: This chart requires a central PostgreSQL database.** You must have a PostgreSQL server available before deploying this chart. The chart does not include a PostgreSQL deployment.
+**IMPORTANT: This chart requires a central PostgreSQL database and Redis server.** You must have both a PostgreSQL and Redis server available before deploying this chart. The chart does not include PostgreSQL or Redis deployments.
 
 **Note:** This chart includes a Chrome headless sidecar container that is required for recipe parsing and scraping functionality. Chrome requires elevated security privileges (`SYS_ADMIN` capability) and additional resources (recommend 256Mi-512Mi memory).
 
@@ -15,6 +15,7 @@ This chart bootstraps a Norish deployment on a Kubernetes cluster using the Helm
 - Kubernetes 1.19+
 - Helm 3.0+
 - **PostgreSQL database server** (required)
+- **Redis server** (required for v0.14.0+)
 - PV provisioner support in the underlying infrastructure (if persistence is enabled)
 
 ## Installing the Chart
@@ -49,13 +50,18 @@ Before deploying, you must configure:
    - Ensure the database exists before deployment
    - Set appropriate credentials
 
-2. **Master Key**: A 32-byte base64-encoded encryption key
+2. **Redis Server** (REQUIRED for v0.14.0+): A Redis server must be available
+   - Configure `redis.host` to point to your Redis server
+   - Configure authentication if required
+   - Used for background job processing and queues
+
+3. **Master Key**: A 32-byte base64-encoded encryption key
    ```bash
    # Generate a master key
    openssl rand -base64 32
    ```
 
-3. **Application URL**: Set `config.authUrl` to match your ingress hostname
+4. **Application URL**: Set `config.authUrl` to match your ingress hostname
 
 ### Authentication Configuration
 
@@ -87,6 +93,12 @@ database:
   name: norish
   username: norish
   password: "secure-password"
+
+redis:
+  host: "redis.default.svc.cluster.local"
+  port: 6379
+  database: 0
+  # Leave password empty if Redis has no authentication
 
 config:
   authUrl: "https://norish.example.com"
@@ -288,7 +300,7 @@ Or if using a centralized PostgreSQL Helm chart or service, ensure the database 
 | Name | Description | Default |
 |------|-------------|---------|
 | `image.repository` | Norish image repository | `norishapp/norish` |
-| `image.tag` | Norish image tag | `v0.13.6-beta` |
+| `image.tag` | Norish image tag | `v0.14.1-beta` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 
@@ -365,6 +377,19 @@ Or if using a centralized PostgreSQL Helm chart or service, ensure the database 
 | `database.passwordKey` | Key in secret for password | `"password"` |
 | `database.databaseKey` | Key in secret for database name | `"database"` |
 | `database.hostKey` | Key in secret for host | `"host"` |
+
+### Redis Parameters (REQUIRED for v0.14.0+)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `redis.host` | Redis server hostname (required) | `""` |
+| `redis.port` | Redis server port | `6379` |
+| `redis.database` | Redis database number | `0` |
+| `redis.username` | Redis username (Redis 6.0+, optional) | `""` |
+| `redis.password` | Redis password (leave empty if no auth) | `""` |
+| `redis.existingSecret` | Use existing secret for Redis URL (recommended for production) | `""` |
+| `redis.urlKey` | Key in existingSecret containing the full Redis URL | `"redis-url"` |
+| `redis.passwordKey` | Key in existingSecret for password (for compatibility) | `"password"` |
 
 ### Chrome Headless Parameters (REQUIRED)
 
@@ -532,6 +557,100 @@ To upgrade the chart:
 ```bash
 $ helm upgrade norish helm-charts/norish -f values.yaml
 ```
+
+### Upgrading from v0.13.x to v0.14.x
+
+**BREAKING CHANGE:** Norish v0.14.0+ requires Redis for background job processing.
+
+Before upgrading, you **must** configure Redis:
+
+**Option 1: Using an existing Redis cluster (Recommended for production)**
+
+Update your `values.yaml`:
+
+```yaml
+redis:
+  host: "redis.default.svc.cluster.local"  # Your Redis server
+  port: 6379
+  database: 0
+  # If Redis requires authentication:
+  existingSecret: "my-redis-secret"  # Secret containing redis-url key
+  urlKey: "redis-url"
+```
+
+Create the Redis secret with the full URL:
+
+```bash
+# For Redis with authentication
+kubectl create secret generic my-redis-secret \
+  --from-literal=redis-url="redis://username:password@redis.default.svc.cluster.local:6379/0"
+
+# For Redis without authentication
+kubectl create secret generic my-redis-secret \
+  --from-literal=redis-url="redis://redis.default.svc.cluster.local:6379/0"
+```
+
+**Option 2: Using plain password in values (Simple setup)**
+
+```yaml
+redis:
+  host: "redis.default.svc.cluster.local"
+  port: 6379
+  database: 0
+  username: "default"  # Optional
+  password: "mypassword"  # Chart will auto-generate redis-url
+```
+
+**Option 3: Redis without authentication**
+
+```yaml
+redis:
+  host: "redis.default.svc.cluster.local"
+  port: 6379
+  database: 0
+  # No password or existingSecret - chart will generate simple URL
+```
+
+After configuring Redis, upgrade the chart:
+
+```bash
+$ helm upgrade norish helm-charts/norish -f values.yaml
+```
+
+### What's New in v0.14.x
+
+**Breaking Changes:**
+- Redis is now required for the application to function
+- See the [upgrade guide](#upgrading-from-v013x-to-v014x) above
+
+**New Features:**
+- Recipe improvements:
+  - Full redesign of the recipe desktop page
+  - Recipe linking and headings in description/instruction steps
+  - Attach images to steps as reference material
+  - Keep screen on during cooking
+  - Drag and drop ingredient and step reordering
+  - Manual or AI-powered macro nutrient estimation
+- New creation options:
+  - Recipe creation by image (supports multiple images, requires AI)
+  - Recipe creation via plain recipe text
+  - "Always use AI to import" override in admin settings
+- Allergy MVP:
+  - Users can set allergies in their settings page
+  - Warnings when planning recipes with matching allergies
+- Rating and liking recipes (including filtering)
+
+**Technical Improvements:**
+- Redis + BullMQ for importing and other background tasks
+- Removed puppeteer in favor of playwright
+- All dependencies updated
+- Improved reverse proxy support
+- Rate limiting for brute force attacks
+
+**Bug Fixes:**
+- User menu not opening import modal
+- User menu creation not linking
+- Improved pre-fetching of recipes and virtualization
 
 ## Support
 
