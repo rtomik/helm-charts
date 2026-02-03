@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: norishapp/norish
-  tag: "v0.14.1-beta"
+  tag: "v0.15.4-beta"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

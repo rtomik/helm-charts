@@ -300,7 +300,7 @@ Or if using a centralized PostgreSQL Helm chart or service, ensure the database 
 | Name | Description | Default |
 |------|-------------|---------|
 | `image.repository` | Norish image repository | `norishapp/norish` |
-| `image.tag` | Norish image tag | `v0.14.1-beta` |
+| `image.tag` | Norish image tag | `v0.15.4-beta` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 

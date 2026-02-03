@@ -2,8 +2,8 @@ apiVersion: v2
 name: norish
 description: Norish helm chart for Kubernetes - A recipe management and meal planning application
 type: application
-version: 0.0.4
-appVersion: "v0.14.1-beta"
+version: 0.0.5
+appVersion: "v0.15.4-beta"
 maintainers:
   - name: Richard Tomik
     email: no@m.com
