@@ -1,92 +1,39 @@
-cl# Norish Helm Chart
+# Norish Helm Chart
 
 A Helm chart for deploying [Norish](https://github.com/norishapp/norish), a recipe management and meal planning application, on Kubernetes.
 
 ## Introduction
 
-This chart bootstraps a Norish deployment on a Kubernetes cluster using the Helm package manager.
+This chart deploys Norish on a Kubernetes cluster. Norish requires an external PostgreSQL database, a Redis server, and includes a Chrome headless sidecar for recipe parsing. It supports multiple authentication methods including password auth, OIDC, GitHub OAuth, and Google OAuth.
 
-**IMPORTANT: This chart requires a central PostgreSQL database and Redis server.** You must have both a PostgreSQL and Redis server available before deploying this chart. The chart does not include PostgreSQL or Redis deployments.
-
-**Note:** This chart includes a Chrome headless sidecar container that is required for recipe parsing and scraping functionality. Chrome requires elevated security privileges (`SYS_ADMIN` capability) and additional resources (recommend 256Mi-512Mi memory).
+Source code: https://github.com/rtomik/helm-charts/tree/main/charts/norish
 
 ## Prerequisites
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- **PostgreSQL database server** (required)
-- **Redis server** (required for v0.14.0+)
-- PV provisioner support in the underlying infrastructure (if persistence is enabled)
+- **PostgreSQL database** (required)
+- **Redis server** (required)
+- PV provisioner support (if persistence is enabled)
 
 ## Installing the Chart
 
-To install the chart with the release name `norish`:
-
 ```bash
-$ helm repo add helm-charts https://rtomik.github.io/helm-charts
-$ helm install norish helm-charts/norish
+helm repo add rtomik https://rtomik.github.io/helm-charts
+helm install norish rtomik/norish
 ```
 
-The command deploys Norish on the Kubernetes cluster with default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
-
 ## Uninstalling the Chart
-
-To uninstall/delete the `norish` deployment:
 
 ```bash
 helm uninstall norish
 ```
 
-This command removes all the Kubernetes components associated with the chart and deletes the release.
+## Configuration Examples
 
-## Configuration
-
-### Required Configuration
-
-Before deploying, you must configure:
-
-1. **PostgreSQL Database** (REQUIRED): A central PostgreSQL database must be available
-   - Configure `database.host` to point to your PostgreSQL server
-   - Ensure the database exists before deployment
-   - Set appropriate credentials
-
-2. **Redis Server** (REQUIRED for v0.14.0+): A Redis server must be available
-   - Configure `redis.host` to point to your Redis server
-   - Configure authentication if required
-   - Used for background job processing and queues
-
-3. **Master Key**: A 32-byte base64-encoded encryption key
-   ```bash
-   # Generate a master key
-   openssl rand -base64 32
-   ```
-
-4. **Application URL**: Set `config.authUrl` to match your ingress hostname
-
-### Authentication Configuration
-
-**Authentication providers are now optional!** You can deploy Norish in two ways:
-
-**Option 1: Password Authentication (Simple Setup)**
-- No external authentication provider required
-- Users can register and log in with email/password
-- Perfect for self-hosted, single-tenant deployments
-- Enabled automatically when no OAuth/OIDC provider is configured
-
-**Option 2: OAuth/OIDC Provider (Enterprise Setup)**
-- Configure ONE of the following:
-  - OIDC/OAuth2
-  - GitHub OAuth
-  - Google OAuth
-- Recommended for multi-user environments
-- Can be combined with password authentication via `config.passwordAuthEnabled`
-
-### Example: Minimal Installation (Password Authentication)
-
-This is the simplest setup using built-in password authentication:
+### Minimal Installation (Password Authentication)
 
 ```yaml
-# values.yaml
 database:
   host: "postgresql.default.svc.cluster.local"
   port: 5432
@@ -98,13 +45,11 @@ redis:
   host: "redis.default.svc.cluster.local"
   port: 6379
   database: 0
-  # Leave password empty if Redis has no authentication
 
 config:
   authUrl: "https://norish.example.com"
   masterKey:
-    value: "<your-32-byte-base64-key>"
-  # passwordAuthEnabled defaults to true when no OAuth/OIDC is configured
+    value: "<your-32-byte-base64-key>"  # Generate: openssl rand -base64 32
 
 ingress:
   enabled: true
@@ -118,368 +63,53 @@ ingress:
         - norish.example.com
 ```
 
-Install with:
-```bash
-$ helm repo add helm-charts https://rtomik.github.io/helm-charts
-$ helm install norish helm-charts/norish -f values.yaml
-```
-
-### Example: Installation with OIDC
-
-For enterprise deployments with an external identity provider:
+### Production with Existing Secrets
 
 ```yaml
-# values.yaml
-database:
-  host: "postgresql.default.svc.cluster.local"
-  port: 5432
-  name: norish
-  username: norish
-  password: "secure-password"
-
-config:
-  authUrl: "https://norish.example.com"
-  masterKey:
-    value: "<your-32-byte-base64-key>"
-  # Optional: Allow both OIDC and password authentication
-  passwordAuthEnabled: "true"
-  auth:
-    oidc:
-      enabled: true
-      name: "MyAuth"
-      issuer: "https://auth.example.com"
-      clientId: "<your-client-id>"
-      clientSecret: "<your-client-secret>"
-
-ingress:
-  enabled: true
-  hosts:
-    - host: norish.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - hosts:
-        - norish.example.com
-```
-
-Install with:
-```bash
-$ helm repo add helm-charts https://rtomik.github.io/helm-charts
-$ helm install norish helm-charts/norish -f values.yaml
-```
-
-### Example: Using Existing Secrets
-
-For production deployments, store sensitive data in Kubernetes secrets:
-
-```yaml
-# values.yaml
 database:
   host: "postgresql.default.svc.cluster.local"
   existingSecret: "norish-db-secret"
   usernameKey: "username"
   passwordKey: "password"
 
+redis:
+  existingSecret: "norish-redis-secret"
+  urlKey: "redis-url"
+
 config:
+  authUrl: "https://norish.example.com"
   masterKey:
     existingSecret: "norish-master-key"
     secretKey: "master-key"
-  auth:
-    oidc:
-      enabled: true
-      name: "MyAuth"
-      issuer: "https://auth.example.com"
-      existingSecret: "norish-oidc-secret"
-      clientIdKey: "client-id"
-      clientSecretKey: "client-secret"
 ```
 
-Create the secrets:
+Create the required secrets:
+
 ```bash
-# Database credentials
 kubectl create secret generic norish-db-secret \
   --from-literal=username="norish" \
   --from-literal=password="secure-db-password"
 
-# Master encryption key
+kubectl create secret generic norish-redis-secret \
+  --from-literal=redis-url="redis://username:password@redis.default.svc.cluster.local:6379/0"
+
 kubectl create secret generic norish-master-key \
   --from-literal=master-key="$(openssl rand -base64 32)"
-
-# OIDC credentials
-kubectl create secret generic norish-oidc-secret \
-  --from-literal=client-id="<your-client-id>" \
-  --from-literal=client-secret="<your-client-secret>"
 ```
 
-### Example: Using Existing PVC
-
-If you want to use an existing PersistentVolumeClaim for uploads storage:
-
-```yaml
-# values.yaml
-persistence:
-  enabled: true
-  existingClaim: "my-existing-pvc"
-```
-
-This is useful when:
-- You want to reuse storage from a previous installation
-- You have pre-provisioned PVCs with specific configurations
-- You're managing PVCs separately from the Helm chart
-
-### Optional Configuration
-
-Version v0.13.6-beta introduces additional optional configuration options:
-
-```yaml
-config:
-  # Log level configuration
-  logLevel: "info"  # Options: trace, debug, info, warn, error, fatal
-
-  # Additional trusted origins (useful when behind a proxy or using multiple domains)
-  trustedOrigins: "http://192.168.1.100:3000,https://norish.example.com"
-
-  # Enable/disable password authentication
-  # Defaults to true when no OAuth/OIDC is configured, false otherwise
-  # Set to "true" to enable password auth alongside OAuth/OIDC
-  passwordAuthEnabled: "true"
-
-  auth:
-    oidc:
-      enabled: true
-      name: "MyAuth"
-      issuer: "https://auth.example.com"
-      # Optional: Custom well-known configuration URL
-      # By default derived from issuer
-      wellKnown: "https://auth.example.com/.well-known/openid-configuration"
-      clientId: "<your-client-id>"
-      clientSecret: "<your-client-secret>"
-```
-
-### Customizing Chrome Headless Resources
-
-Chrome headless is required but you can customize its resource limits:
-
-```yaml
-chrome:
-  enabled: true  # Must be true for v0.13.6+
-  resources:
-    limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
-```
-
-### Setting Up PostgreSQL Database
-
-You need to create the database before deploying this chart:
-
-```sql
--- Connect to your PostgreSQL server
-CREATE DATABASE norish;
-CREATE USER norish WITH ENCRYPTED PASSWORD 'secure-password';
-GRANT ALL PRIVILEGES ON DATABASE norish TO norish;
-```
-
-Or if using a centralized PostgreSQL Helm chart or service, ensure the database is created and accessible from your Kubernetes cluster.
-
-## Parameters
-
-### Global Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `nameOverride` | Override the chart name | `""` |
-| `fullnameOverride` | Override the full resource names | `""` |
-
-### Image Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `image.repository` | Norish image repository | `norishapp/norish` |
-| `image.tag` | Norish image tag | `v0.15.4-beta` |
-| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `imagePullSecrets` | Image pull secrets | `[]` |
-
-### Deployment Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `replicaCount` | Number of replicas | `1` |
-| `revisionHistoryLimit` | Number of old ReplicaSets to retain | `3` |
-
-### Service Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `service.type` | Kubernetes service type | `ClusterIP` |
-| `service.port` | Service port | `3000` |
-| `service.annotations` | Service annotations | `{}` |
-
-### Ingress Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `ingress.enabled` | Enable ingress | `false` |
-| `ingress.className` | Ingress class name | `""` |
-| `ingress.annotations` | Ingress annotations | `{"traefik.ingress.kubernetes.io/router.entrypoints": "websecure"}` |
-| `ingress.hosts` | Ingress hosts configuration | See values.yaml |
-| `ingress.tls` | Ingress TLS configuration | See values.yaml |
-
-### Persistence Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `persistence.enabled` | Enable persistent storage | `true` |
-| `persistence.existingClaim` | Use an existing PVC instead of creating a new one | `""` |
-| `persistence.storageClass` | Storage class name | `""` |
-| `persistence.accessMode` | Access mode | `ReadWriteOnce` |
-| `persistence.size` | Storage size | `5Gi` |
-| `persistence.annotations` | PVC annotations | `{}` |
-
-### Application Configuration
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `config.authUrl` | Application URL (required) | `"http://norish.domain.com"` |
-| `config.masterKey.value` | Master encryption key | `""` |
-| `config.masterKey.existingSecret` | Use existing secret for master key | `""` |
-| `config.logLevel` | Log level: trace, debug, info, warn, error, fatal | `""` |
-| `config.trustedOrigins` | Additional trusted origins (comma-separated) | `""` |
-| `config.passwordAuthEnabled` | Enable/disable password authentication (defaults to true when no OAuth/OIDC configured) | `""` |
-| `config.auth.oidc.enabled` | Enable OIDC authentication | `false` |
-| `config.auth.oidc.name` | OIDC provider name | `"MyAuth"` |
-| `config.auth.oidc.issuer` | OIDC issuer URL | `""` |
-| `config.auth.oidc.wellKnown` | OIDC well-known configuration URL (optional) | `""` |
-| `config.auth.oidc.clientId` | OIDC client ID | `""` |
-| `config.auth.oidc.clientSecret` | OIDC client secret | `""` |
-| `config.auth.github.enabled` | Enable GitHub OAuth | `false` |
-| `config.auth.github.clientId` | GitHub client ID | `""` |
-| `config.auth.github.clientSecret` | GitHub client secret | `""` |
-| `config.auth.google.enabled` | Enable Google OAuth | `false` |
-| `config.auth.google.clientId` | Google client ID | `""` |
-| `config.auth.google.clientSecret` | Google client secret | `""` |
-
-### Database Parameters (REQUIRED)
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `database.host` | PostgreSQL database host (required) | `""` |
-| `database.port` | PostgreSQL database port | `5432` |
-| `database.name` | PostgreSQL database name | `norish` |
-| `database.username` | PostgreSQL username | `postgres` |
-| `database.password` | PostgreSQL password | `""` |
-| `database.existingSecret` | Use existing secret for database credentials | `""` |
-| `database.usernameKey` | Key in secret for username | `"username"` |
-| `database.passwordKey` | Key in secret for password | `"password"` |
-| `database.databaseKey` | Key in secret for database name | `"database"` |
-| `database.hostKey` | Key in secret for host | `"host"` |
-
-### Redis Parameters (REQUIRED for v0.14.0+)
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `redis.host` | Redis server hostname (required) | `""` |
-| `redis.port` | Redis server port | `6379` |
-| `redis.database` | Redis database number | `0` |
-| `redis.username` | Redis username (Redis 6.0+, optional) | `""` |
-| `redis.password` | Redis password (leave empty if no auth) | `""` |
-| `redis.existingSecret` | Use existing secret for Redis URL (recommended for production) | `""` |
-| `redis.urlKey` | Key in existingSecret containing the full Redis URL | `"redis-url"` |
-| `redis.passwordKey` | Key in existingSecret for password (for compatibility) | `"password"` |
-
-### Chrome Headless Parameters (REQUIRED)
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `chrome.enabled` | Enable Chrome headless sidecar (required for v0.13.6+) | `true` |
-| `chrome.image.repository` | Chrome headless image repository | `zenika/alpine-chrome` |
-| `chrome.image.tag` | Chrome headless image tag | `latest` |
-| `chrome.image.pullPolicy` | Chrome image pull policy | `IfNotPresent` |
-| `chrome.port` | Chrome remote debugging port | `3000` |
-| `chrome.resources` | Chrome container resource limits/requests | `{}` |
-
-### Security Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `podSecurityContext.runAsNonRoot` | Run as non-root user | `true` |
-| `podSecurityContext.runAsUser` | User ID to run as | `1000` |
-| `podSecurityContext.fsGroup` | Group ID for filesystem | `1000` |
-
-### Resource Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `resources` | CPU/Memory resource requests/limits | `{}` |
-
-### Health Check Parameters
-
-| Name | Description | Default |
-|------|-------------|---------|
-| `probes.startup.enabled` | Enable startup probe | `true` |
-| `probes.liveness.enabled` | Enable liveness probe | `true` |
-| `probes.readiness.enabled` | Enable readiness probe | `true` |
-
-## What's New in v0.13.6-beta
-
-This version introduces several improvements and new features:
-
-**UI/UX Improvements:**
-- Ability to change prompts used in Settings → Admin
-- Improved transcriber logic
-- Double tapping/clicking planned recipes now opens the recipe page
-- Small icon that opens the original recipe page
-- Add recipes button now opens a dropdown instead of instantly redirecting to manual creation
-
-**New Features:**
-- Support for trusting additional origins using `TRUSTED_ORIGINS` environment variable (comma-separated)
-- Customizable password authentication via `PASSWORD_AUTH_ENABLED` flag
-- Configurable log level via `NEXT_PUBLIC_LOG_LEVEL`
-
-**Bug Fixes:**
-- User menu remaining open when clicking import
-- Text truncation no longer uses the tailwind truncate class in the calendar
-- Comma decimals being parsed as nothing (e.g., 2,5 ended up as 25)
-- Unicode character handling
-
-**Breaking Changes:**
-- Chrome headless is now mandatory for improved parsing functionality
-
-## Authentication Setup
-
-Norish v0.13.6-beta and later support multiple authentication methods:
-
-### Password Authentication (Default)
-
-When no external authentication provider is configured, Norish automatically enables password-based authentication. Users can:
-- Register new accounts with email and password
-- Log in using their credentials
-- Manage their account through the web interface
-
-This is the simplest setup and perfect for:
-- Self-hosted, single-user or family deployments
-- Testing and development environments
-- Scenarios where external OAuth providers are not needed
-
-### External Authentication Providers (Optional)
-
-For enterprise or multi-tenant deployments, you can configure external authentication providers. After configuring a provider, you can manage additional authentication methods through the Settings → Admin interface.
-
-### OIDC/OAuth2
+### OIDC Authentication
 
 ```yaml
 config:
   auth:
     oidc:
       enabled: true
-      name: "Authentik"  # Display name
+      name: "Authentik"
       issuer: "https://auth.example.com/application/o/norish/"
       clientId: "<your-client-id>"
       clientSecret: "<your-client-secret>"
+  # Optional: allow password auth alongside OIDC
+  passwordAuthEnabled: "true"
 ```
 
 ### GitHub OAuth
@@ -510,154 +140,216 @@ config:
       clientSecret: "<your-google-client-secret>"
 ```
 
+### Using Existing PVC
+
+```yaml
+persistence:
+  enabled: true
+  existingClaim: "my-existing-pvc"
+```
+
+## Parameters
+
+### Global Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `nameOverride` | Override the release name | `""` |
+| `fullnameOverride` | Fully override the release name | `""` |
+
+### Image Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `image.repository` | Norish image repository | `norishapp/norish` |
+| `image.tag` | Image tag | `v0.15.4-beta` |
+| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `imagePullSecrets` | Image pull secrets | `[]` |
+
+### Deployment Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `replicaCount` | Number of replicas | `1` |
+| `revisionHistoryLimit` | Revisions to retain | `3` |
+| `podSecurityContext.runAsNonRoot` | Run as non-root | `true` |
+| `podSecurityContext.runAsUser` | User ID | `1000` |
+| `podSecurityContext.fsGroup` | Filesystem group ID | `1000` |
+| `nodeSelector` | Node selector | `{}` |
+| `tolerations` | Tolerations | `[]` |
+| `affinity` | Affinity rules | `{}` |
+| `podAnnotations` | Pod annotations | `{}` |
+
+### Service Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `3000` |
+| `service.annotations` | Service annotations | `{}` |
+
+### Ingress Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `ingress.enabled` | Enable ingress | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | See values.yaml |
+| `ingress.hosts` | Ingress hosts | See values.yaml |
+| `ingress.tls` | TLS configuration | See values.yaml |
+
+### Persistence Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `persistence.enabled` | Enable persistence | `true` |
+| `persistence.existingClaim` | Use an existing PVC | `""` |
+| `persistence.storageClass` | Storage class | `""` |
+| `persistence.accessMode` | Access mode | `ReadWriteOnce` |
+| `persistence.size` | PVC size | `5Gi` |
+| `persistence.annotations` | PVC annotations | `{}` |
+
+### Database Configuration (Required)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `database.host` | PostgreSQL host | `""` |
+| `database.port` | PostgreSQL port | `5432` |
+| `database.name` | Database name | `norish` |
+| `database.username` | Username | `postgres` |
+| `database.password` | Password | `""` |
+| `database.existingSecret` | Existing secret name | `""` |
+| `database.usernameKey` | Key for username in secret | `username` |
+| `database.passwordKey` | Key for password in secret | `password` |
+| `database.databaseKey` | Key for database name in secret | `database` |
+| `database.hostKey` | Key for host in secret | `""` |
+
+### Redis Configuration (Required)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `redis.host` | Redis host | `""` |
+| `redis.port` | Redis port | `6379` |
+| `redis.database` | Redis database number | `0` |
+| `redis.username` | Redis username (6.0+) | `""` |
+| `redis.password` | Redis password | `""` |
+| `redis.existingSecret` | Existing secret name | `""` |
+| `redis.urlKey` | Key for full Redis URL in secret | `redis-url` |
+| `redis.passwordKey` | Key for password in secret | `password` |
+
+### Application Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.authUrl` | Application URL (must match ingress) | `http://norish.domain.com` |
+| `config.logLevel` | Log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) | `""` |
+| `config.trustedOrigins` | Additional trusted origins (comma-separated) | `""` |
+| `config.passwordAuthEnabled` | Enable/disable password auth | `""` |
+| `config.extraEnv` | Extra environment variables | `[]` |
+
+### Master Key Configuration (Required)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.masterKey.value` | 32-byte base64 encryption key | `""` |
+| `config.masterKey.existingSecret` | Existing secret name | `""` |
+| `config.masterKey.secretKey` | Key in secret | `master-key` |
+
+Generate with: `openssl rand -base64 32`
+
+### OIDC Authentication
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.auth.oidc.enabled` | Enable OIDC | `false` |
+| `config.auth.oidc.name` | Provider display name | `MyAuth` |
+| `config.auth.oidc.issuer` | OIDC issuer URL | `""` |
+| `config.auth.oidc.clientId` | Client ID | `""` |
+| `config.auth.oidc.clientSecret` | Client secret | `""` |
+| `config.auth.oidc.wellKnown` | Well-known URL (optional) | `""` |
+| `config.auth.oidc.existingSecret` | Existing secret name | `""` |
+| `config.auth.oidc.clientIdKey` | Key for client ID in secret | `oidc-client-id` |
+| `config.auth.oidc.clientSecretKey` | Key for client secret in secret | `oidc-client-secret` |
+
+### GitHub OAuth
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.auth.github.enabled` | Enable GitHub OAuth | `false` |
+| `config.auth.github.clientId` | Client ID | `""` |
+| `config.auth.github.clientSecret` | Client secret | `""` |
+| `config.auth.github.existingSecret` | Existing secret name | `""` |
+| `config.auth.github.clientIdKey` | Key for client ID in secret | `github-client-id` |
+| `config.auth.github.clientSecretKey` | Key for client secret in secret | `github-client-secret` |
+
+### Google OAuth
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.auth.google.enabled` | Enable Google OAuth | `false` |
+| `config.auth.google.clientId` | Client ID | `""` |
+| `config.auth.google.clientSecret` | Client secret | `""` |
+| `config.auth.google.existingSecret` | Existing secret name | `""` |
+| `config.auth.google.clientIdKey` | Key for client ID in secret | `google-client-id` |
+| `config.auth.google.clientSecretKey` | Key for client secret in secret | `google-client-secret` |
+
+### Chrome Headless Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `chrome.enabled` | Enable Chrome sidecar | `true` |
+| `chrome.image.repository` | Chrome image repository | `zenika/alpine-chrome` |
+| `chrome.image.tag` | Chrome image tag | `latest` |
+| `chrome.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `chrome.port` | Chrome debugging port | `9222` |
+| `chrome.securityContext` | Chrome security context (requires root + SYS_ADMIN) | See values.yaml |
+| `chrome.resources` | Chrome resource limits | `{}` |
+
+### Resource Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `resources` | Resource limits and requests | `{}` |
+
+### Health Check Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `probes.startup.enabled` | Enable startup probe | `true` |
+| `probes.startup.initialDelaySeconds` | Startup initial delay | `10` |
+| `probes.startup.periodSeconds` | Startup period | `10` |
+| `probes.startup.failureThreshold` | Startup failure threshold | `30` |
+| `probes.liveness.enabled` | Enable liveness probe | `true` |
+| `probes.liveness.initialDelaySeconds` | Liveness initial delay | `30` |
+| `probes.liveness.periodSeconds` | Liveness period | `10` |
+| `probes.readiness.enabled` | Enable readiness probe | `true` |
+| `probes.readiness.initialDelaySeconds` | Readiness initial delay | `5` |
+| `probes.readiness.periodSeconds` | Readiness period | `5` |
+
+## Upgrading
+
+### From v0.13.x to v0.14.x
+
+**Breaking change**: Redis is now required. Configure Redis before upgrading (see [Redis Configuration](#redis-configuration-required)).
+
+### From v0.14.x to v0.15.x
+
+No configuration changes required. Redis, PostgreSQL, and Chrome headless are already configured. Back up your database before upgrading as a precaution.
+
 ## Troubleshooting
 
-### Check Pod Status
+- **Master Key Not Set**: Generate with `openssl rand -base64 32`
+- **Login Failures**: Password auth is enabled by default when no OAuth/OIDC is configured. Verify callback URLs match your ingress hostname.
+- **Database Connection Failed**: Verify host, credentials, and that the database exists.
+- **Chrome Headless Issues**: Chrome requires `SYS_ADMIN` capability and 256Mi-512Mi memory. Check logs with `kubectl logs -l app.kubernetes.io/name=norish -c chrome-headless`
+- **Recipe Parsing Failures**: Ensure Chrome is running. `CHROME_WS_ENDPOINT` is automatically configured by the chart.
 
 ```bash
 kubectl get pods -l app.kubernetes.io/name=norish
 kubectl logs -l app.kubernetes.io/name=norish
 ```
 
-### Check Database Connection
+## Links
 
-```bash
-# Test connection from app pod
-kubectl exec -it deployment/norish -- sh
-nc -zv <your-postgres-host> 5432
-```
-
-### Common Issues
-
-1. **Master Key Not Set**: Ensure you've generated and configured a master key
-2. **Cannot Log In**:
-   - Password authentication is enabled by default when no OAuth/OIDC is configured
-   - If you configured an external provider, ensure the client ID/secret are correct
-   - Check the callback URL matches your ingress hostname
-3. **Database Connection Failed**:
-   - Verify database host is correct and accessible from the cluster
-   - Check database credentials
-   - Ensure the database exists
-   - Verify network policies allow connections to the database
-4. **Application Not Accessible**: Verify ingress configuration and DNS records
-5. **Chrome Headless Issues**:
-   - Chrome requires `SYS_ADMIN` capability for proper operation
-   - If pod fails to start, check if your cluster's security policies allow the required capabilities
-   - Chrome container may require additional memory (256Mi-512Mi recommended)
-   - Check Chrome container logs: `kubectl logs -l app.kubernetes.io/name=norish -c chrome-headless`
-6. **Recipe Parsing Failures**:
-   - Ensure Chrome headless is running: `kubectl get pods -l app.kubernetes.io/name=norish`
-   - Verify `CHROME_WS_ENDPOINT` is set correctly (automatically configured by the chart)
-   - Check if Chrome is accessible from the Norish container
-
-## Upgrading
-
-To upgrade the chart:
-
-```bash
-$ helm upgrade norish helm-charts/norish -f values.yaml
-```
-
-### Upgrading from v0.13.x to v0.14.x
-
-**BREAKING CHANGE:** Norish v0.14.0+ requires Redis for background job processing.
-
-Before upgrading, you **must** configure Redis:
-
-**Option 1: Using an existing Redis cluster (Recommended for production)**
-
-Update your `values.yaml`:
-
-```yaml
-redis:
-  host: "redis.default.svc.cluster.local"  # Your Redis server
-  port: 6379
-  database: 0
-  # If Redis requires authentication:
-  existingSecret: "my-redis-secret"  # Secret containing redis-url key
-  urlKey: "redis-url"
-```
-
-Create the Redis secret with the full URL:
-
-```bash
-# For Redis with authentication
-kubectl create secret generic my-redis-secret \
-  --from-literal=redis-url="redis://username:password@redis.default.svc.cluster.local:6379/0"
-
-# For Redis without authentication
-kubectl create secret generic my-redis-secret \
-  --from-literal=redis-url="redis://redis.default.svc.cluster.local:6379/0"
-```
-
-**Option 2: Using plain password in values (Simple setup)**
-
-```yaml
-redis:
-  host: "redis.default.svc.cluster.local"
-  port: 6379
-  database: 0
-  username: "default"  # Optional
-  password: "mypassword"  # Chart will auto-generate redis-url
-```
-
-**Option 3: Redis without authentication**
-
-```yaml
-redis:
-  host: "redis.default.svc.cluster.local"
-  port: 6379
-  database: 0
-  # No password or existingSecret - chart will generate simple URL
-```
-
-After configuring Redis, upgrade the chart:
-
-```bash
-$ helm upgrade norish helm-charts/norish -f values.yaml
-```
-
-### What's New in v0.14.x
-
-**Breaking Changes:**
-- Redis is now required for the application to function
-- See the [upgrade guide](#upgrading-from-v013x-to-v014x) above
-
-**New Features:**
-- Recipe improvements:
-  - Full redesign of the recipe desktop page
-  - Recipe linking and headings in description/instruction steps
-  - Attach images to steps as reference material
-  - Keep screen on during cooking
-  - Drag and drop ingredient and step reordering
-  - Manual or AI-powered macro nutrient estimation
-- New creation options:
-  - Recipe creation by image (supports multiple images, requires AI)
-  - Recipe creation via plain recipe text
-  - "Always use AI to import" override in admin settings
-- Allergy MVP:
-  - Users can set allergies in their settings page
-  - Warnings when planning recipes with matching allergies
-- Rating and liking recipes (including filtering)
-
-**Technical Improvements:**
-- Redis + BullMQ for importing and other background tasks
-- Removed puppeteer in favor of playwright
-- All dependencies updated
-- Improved reverse proxy support
-- Rate limiting for brute force attacks
-
-**Bug Fixes:**
-- User menu not opening import modal
-- User menu creation not linking
-- Improved pre-fetching of recipes and virtualization
-
-## Support
-
-- Norish Repository: https://github.com/norishapp/norish
-- Chart Repository: https://github.com/rtomik/helm-charts
-- Issue Tracker: https://github.com/rtomik/helm-charts/issues
-
-## License
-
-This Helm chart is provided as-is under the same license as the Norish application.
+- [Norish GitHub](https://github.com/norishapp/norish)
+- [Chart Source](https://github.com/rtomik/helm-charts/tree/main/charts/norish)

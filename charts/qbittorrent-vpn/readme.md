@@ -1,117 +1,52 @@
-# qBittorrent with Gluetun VPN
+# qBittorrent VPN Helm Chart
 
-A Helm chart for deploying qBittorrent with a Gluetun VPN sidecar container on Kubernetes.
+A Helm chart for deploying [qBittorrent](https://www.qbittorrent.org/) with a [Gluetun](https://github.com/qdm12/gluetun) VPN sidecar on Kubernetes.
 
 ## Introduction
 
-This chart deploys [qBittorrent](https://www.qbittorrent.org/) alongside [Gluetun](https://github.com/qdm12/gluetun), a VPN client/tunnel in a container, to ensure all BitTorrent traffic is routed through the VPN. The chart supports all major VPN providers and protocols through Gluetun's comprehensive compatibility.
+This chart deploys qBittorrent alongside Gluetun, ensuring all BitTorrent traffic is routed through a VPN. It supports 30+ VPN providers via OpenVPN or WireGuard, includes a kill-switch firewall, and exposes HTTP/Socks proxy services.
 
-Source code can be found here:
-- https://github.com/rtomik/helm-charts/tree/main/charts/qbittorrent-vpn
+Source code: https://github.com/rtomik/helm-charts/tree/main/charts/qbittorrent-vpn
 
-Note: Currently only tested with NordVPN an OpenVPN configuration.
-
-## Features
-
-- **Multiple VPN Providers**: Support for 30+ VPN providers including NordVPN, ProtonVPN, Private Internet Access, ExpressVPN, Surfshark, Mullvad, and more
-- **Protocol Support**: Use OpenVPN or WireGuard based on your provider's capabilities
-- **Server Selection**: Choose servers by country, city, or specific hostnames with optional randomization
-- **Security**: Proper container security settings to ensure traffic only flows through the VPN
-- **Health Monitoring**: Integrated health checks for both qBittorrent and the VPN connection
-- **Persistence**: Separate volume storage for configuration and downloads
-- **Web UI**: Access qBittorrent via web interface with optional ingress support
-- **Proxy Services**: HTTP and Shadowsocks proxies for additional devices to use the VPN tunnel
+**Note**: Currently only tested with NordVPN and OpenVPN configuration.
 
 ## Prerequisites
 
 - Kubernetes 1.19+
 - Helm 3.2.0+
 - PV provisioner support in the cluster
-- A valid subscription to a VPN service
+- A valid VPN subscription
 
-## Installation
-
-### Add the Repository
+## Installing the Chart
 
 ```bash
-helm repo add rtomik-charts https://rtomik.github.io/helm-charts
-helm repo update
+helm repo add rtomik https://rtomik.github.io/helm-charts
+helm install qbittorrent-vpn rtomik/qbittorrent-vpn
 ```
 
-### Create a Secret for VPN Credentials
-
-For better security, store your VPN credentials in a Kubernetes secret:
+## Uninstalling the Chart
 
 ```bash
-# For OpenVPN authentication
-kubectl create secret generic vpn-credentials \
-  --namespace default \
-  --from-literal=username='your-vpn-username' \
-  --from-literal=password='your-vpn-password'
-
-# For WireGuard authentication (if using WireGuard)
-kubectl create secret generic wireguard-keys \
-  --namespace default \
-  --from-literal=private_key='your-wireguard-private-key'
+helm uninstall qbittorrent-vpn
 ```
 
-Then reference this secret in your values:
-
-```yaml
-gluetun:
-  credentials:
-    create: false
-    existingSecret: "vpn-credentials"
-    usernameKey: "username"
-    passwordKey: "password"
-```
-
-### Install the Chart
-
-```bash
-# Option 1: Installation with custom values file (recommended)
-helm install qbittorrent-vpn rtomik-charts/qbittorrent-vpn -f values.yaml -n media
-
-# Option 2: Installation with inline parameter overrides
-helm install qbittorrent-vpn rtomik-charts/qbittorrent-vpn -n media \
-  --set gluetun.vpn.provider=nordvpn \
-  --set gluetun.vpn.serverCountries=Germany \
-  --set-string gluetun.credentials.existingSecret=vpn-credentials
-```
-
-## Uninstallation
-
-```bash
-helm uninstall qbittorrent-vpn -n media
-```
-
-Note: This will not delete Persistent Volume Claims. To delete them:
+**Note**: PVCs are not deleted automatically. To remove them:
 
 ```bash
 kubectl delete pvc -l app.kubernetes.io/instance=qbittorrent-vpn
 ```
 
-## Configuration
+## Configuration Examples
 
-### Key Parameters
+### NordVPN with Existing Secret
 
-| Parameter                             | Description                                           | Default                    |
-|---------------------------------------|-------------------------------------------------------|----------------------------|
-| `qbittorrent.image.repository`        | qBittorrent image repository                          | `linuxserver/qbittorrent`  |
-| `qbittorrent.image.tag`               | qBittorrent image tag                                 | `latest`                   |
-| `gluetun.image.repository`            | Gluetun image repository                              | `qmcgaw/gluetun`           |
-| `gluetun.image.tag`                   | Gluetun image tag                                     | `v3.40.0`                  |
-| `gluetun.vpn.provider`                | VPN provider name                                     | `nordvpn`                  |
-| `gluetun.vpn.type`                    | VPN protocol (`openvpn` or `wireguard`)              | `openvpn`                  |
-| `gluetun.vpn.serverCountries`         | Countries to connect to (comma-separated)            | `Germany`                  |
-| `persistence.config.size`             | Size of PVC for qBittorrent config                    | `2Gi`                      |
-| `persistence.downloads.size`          | Size of PVC for downloads                             | `100Gi`                    |
-| `ingress.enabled`                     | Enable ingress controller resource                     | `true`                     |
-| `ingress.hosts[0].host`               | Hostname for the ingress                              | `qbittorrent.domain.com`   |
+First, create a secret with your VPN credentials:
 
-For a complete list of parameters, see the [values.yaml](values.yaml) file.
-
-### Example: Using with NordVPN
+```bash
+kubectl create secret generic vpn-credentials \
+  --from-literal=username='your-vpn-username' \
+  --from-literal=password='your-vpn-password'
+```
 
 ```yaml
 gluetun:
@@ -120,14 +55,26 @@ gluetun:
     type: "openvpn"
     serverCountries: "United States"
     openvpn:
-      NORDVPN_CATEGORY: "P2P"  # For torrent-optimized servers
+      NORDVPN_CATEGORY: "P2P"
   credentials:
-    create: true
-    username: "your-nordvpn-username"
-    password: "your-nordvpn-password"
+    create: false
+    existingSecret: "vpn-credentials"
+    usernameKey: "username"
+    passwordKey: "password"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: qbittorrent.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - qbittorrent.example.com
 ```
 
-### Example: Using with ProtonVPN
+### ProtonVPN
 
 ```yaml
 gluetun:
@@ -136,15 +83,15 @@ gluetun:
     type: "openvpn"
     serverCountries: "Switzerland"
     openvpn:
-      PROTONVPN_TIER: "2"  # 0 is free, 2 is paid (Plus/Visionary)
-      SERVER_FEATURES: "p2p"  # For torrent support
+      PROTONVPN_TIER: "2"
+      SERVER_FEATURES: "p2p"
   credentials:
     create: true
     username: "protonvpn-username"
     password: "protonvpn-password"
 ```
 
-### Example: Using with Private Internet Access
+### Private Internet Access with Port Forwarding
 
 ```yaml
 gluetun:
@@ -157,40 +104,11 @@ gluetun:
     username: "pia-username"
     password: "pia-password"
   settings:
-    VPN_PORT_FORWARDING: "on"  # PIA supports port forwarding
+    VPN_PORT_FORWARDING: "on"
+    STATUS_FILE: "/tmp/gluetun-status.json"
 ```
 
-## VPN Provider Support
-
-This chart supports all VPN providers compatible with Gluetun, including:
-
-- AirVPN
-- Cyberghost
-- ExpressVPN
-- FastestVPN
-- HideMyAss
-- IPVanish
-- IVPN
-- Mullvad
-- NordVPN
-- Perfect Privacy
-- Private Internet Access (PIA)
-- PrivateVPN
-- ProtonVPN
-- PureVPN
-- Surfshark
-- TorGuard
-- VyprVPN
-- WeVPN
-- Windscribe
-
-For the complete list and provider-specific options, see the [Gluetun Providers Documentation](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers).
-
-## Additional Features
-
-### Accessing the HTTP Proxy
-
-Gluetun provides an HTTP proxy on port 8888 that can be used by other applications to route traffic through the VPN. To expose this proxy:
+### Proxy Services
 
 ```yaml
 service:
@@ -200,33 +118,9 @@ service:
     socksPort: 8388
 ```
 
-### Firewall Settings
+### Custom Sidecar (NATMap)
 
-By default, the chart enables the Gluetun firewall to prevent leaks if the VPN connection drops. You can customize this:
-
-```yaml
-gluetun:
-  settings:
-    FIREWALL: "on"
-    FIREWALL_OUTBOUND_SUBNETS: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
-```
-
-### Port Forwarding
-
-For VPN providers that support port forwarding (like PIA):
-
-```yaml
-gluetun:
-  settings:
-    VPN_PORT_FORWARDING: "on"
-    STATUS_FILE: "/tmp/gluetun-status.json"
-```
-
-### Custom Sidecar Containers
-
-The chart supports adding custom sidecar containers to the pod. This is useful for adding additional functionality like port forwarding management (NATMap), monitoring, or other helper containers.
-
-Sidecars are specified using the standard Kubernetes container specification:
+Sidecars can access shared volumes: `config`, `downloads`, and `gluetun-config`.
 
 ```yaml
 sidecars:
@@ -246,67 +140,164 @@ sidecars:
         subPath: natmap
 ```
 
-**Common Use Cases:**
+## Parameters
 
-1. **NATMap**: Automatically update port forwarding configurations
-2. **Monitoring**: Add monitoring agents or exporters
-3. **Custom Scripts**: Run periodic maintenance or update tasks
+### qBittorrent Parameters
 
-**Sharing Volumes:**
+| Name | Description | Default |
+|------|-------------|---------|
+| `qbittorrent.image.repository` | qBittorrent image repository | `linuxserver/qbittorrent` |
+| `qbittorrent.image.tag` | qBittorrent image tag | `5.1.0` |
+| `qbittorrent.image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `qbittorrent.bittorrentPort` | BitTorrent traffic port | `6881` |
+| `qbittorrent.service.port` | Web UI port | `8080` |
 
-Sidecars can access the same volumes as the main containers:
-- `config`: qBittorrent configuration volume
-- `downloads`: Downloads volume
-- `gluetun-config`: Gluetun configuration volume (if enabled)
+### Gluetun VPN Parameters
 
-For the full Kubernetes container specification reference, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#container-v1-core).
+| Name | Description | Default |
+|------|-------------|---------|
+| `gluetun.enabled` | Enable Gluetun VPN sidecar | `true` |
+| `gluetun.image.repository` | Gluetun image repository | `qmcgaw/gluetun` |
+| `gluetun.image.tag` | Gluetun image tag | `v3.40.0` |
+| `gluetun.vpn.provider` | VPN provider name | `nordvpn` |
+| `gluetun.vpn.type` | VPN protocol (`openvpn` or `wireguard`) | `openvpn` |
+| `gluetun.vpn.serverCountries` | Countries to connect (comma-separated) | `Netherlands` |
+| `gluetun.vpn.serverCities` | Cities to connect (optional) | `""` |
+| `gluetun.vpn.serverNames` | Specific server names (optional) | `""` |
+| `gluetun.vpn.randomize` | Randomize server selection | `true` |
+
+### VPN Credentials
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `gluetun.credentials.create` | Create credentials secret | `true` |
+| `gluetun.credentials.username` | VPN username (if creating secret) | `""` |
+| `gluetun.credentials.password` | VPN password (if creating secret) | `""` |
+| `gluetun.credentials.existingSecret` | Existing secret name | `""` |
+| `gluetun.credentials.usernameKey` | Key for username in secret | `username` |
+| `gluetun.credentials.passwordKey` | Key for password in secret | `password` |
+
+### Gluetun Settings
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `gluetun.settings.FIREWALL` | Enable firewall | `on` |
+| `gluetun.settings.FIREWALL_OUTBOUND_SUBNETS` | Allowed outbound subnets | `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` |
+| `gluetun.settings.FIREWALL_INPUT_PORTS` | Ports allowed through firewall | `8080` |
+| `gluetun.settings.FIREWALL_DEBUG` | Enable firewall debug | `on` |
+| `gluetun.settings.VPN_PORT_FORWARDING` | Enable port forwarding | `off` |
+| `gluetun.settings.DNS_ADDRESS` | DNS server address | `1.1.1.1` |
+| `gluetun.resources.limits.cpu` | CPU limit | `300m` |
+| `gluetun.resources.limits.memory` | Memory limit | `256Mi` |
+
+### WireGuard Configuration (when using WireGuard)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `gluetun.vpn.wireguard.privateKey` | WireGuard private key | `""` |
+| `gluetun.vpn.wireguard.privateKeyExistingSecret` | Existing secret with private key | `""` |
+| `gluetun.vpn.wireguard.addresses` | WireGuard addresses | `""` |
+| `gluetun.vpn.wireguard.endpointIP` | Server endpoint IP (optional) | `""` |
+| `gluetun.vpn.wireguard.endpointPort` | Server endpoint port (optional) | `""` |
+
+### Deployment Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `replicaCount` | Number of replicas | `1` |
+| `revisionHistoryLimit` | Revisions to retain | `3` |
+| `podSecurityContext.runAsNonRoot` | Run as non-root | `false` |
+| `podSecurityContext.runAsUser` | User ID | `0` |
+| `podSecurityContext.fsGroup` | Filesystem group ID | `0` |
+| `nodeSelector` | Node selector | `{}` |
+| `tolerations` | Tolerations | `[]` |
+| `affinity` | Affinity rules | `{}` |
+
+### Service Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `8080` |
+| `service.proxies.enabled` | Enable HTTP/Socks proxy services | `false` |
+| `service.proxies.httpPort` | HTTP proxy port | `8888` |
+| `service.proxies.socksPort` | Socks proxy port | `8388` |
+
+### Ingress Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `ingress.enabled` | Enable ingress | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | `[]` |
+| `ingress.hosts` | Ingress hosts | See values.yaml |
+| `ingress.tls` | TLS configuration | See values.yaml |
+
+### Persistence Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `qbittorrent.persistence.config.enabled` | Enable config PVC | `true` |
+| `qbittorrent.persistence.config.existingClaim` | Existing config PVC | `""` |
+| `qbittorrent.persistence.config.size` | Config PVC size | `2Gi` |
+| `qbittorrent.persistence.downloads.enabled` | Enable downloads PVC | `true` |
+| `qbittorrent.persistence.downloads.existingClaim` | Existing downloads PVC | `""` |
+| `qbittorrent.persistence.downloads.size` | Downloads PVC size | `2Gi` |
+| `gluetun.persistence.enabled` | Enable Gluetun config PVC | `true` |
+| `gluetun.persistence.size` | Gluetun config PVC size | `100Mi` |
+
+### Sidecar Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `sidecars` | Additional sidecar containers | `[]` |
+
+### Health Check Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `probes.liveness.enabled` | Enable liveness probe | `true` |
+| `probes.liveness.path` | Liveness probe path | `/` |
+| `probes.liveness.periodSeconds` | Liveness period | `30` |
+| `probes.readiness.enabled` | Enable readiness probe | `true` |
+| `probes.readiness.path` | Readiness probe path | `/` |
+| `probes.readiness.periodSeconds` | Readiness period | `10` |
+
+## Supported VPN Providers
+
+AirVPN, Cyberghost, ExpressVPN, FastestVPN, HideMyAss, IPVanish, IVPN, Mullvad, NordVPN, Perfect Privacy, Private Internet Access, PrivateVPN, ProtonVPN, PureVPN, Surfshark, TorGuard, VyprVPN, WeVPN, Windscribe, and more.
+
+See the [Gluetun Providers Documentation](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers) for the full list and provider-specific options.
 
 ## Troubleshooting
 
-### VPN Connection Issues
+### VPN Not Connecting
 
-If the VPN isn't connecting properly:
+```bash
+kubectl logs deployment/qbittorrent-vpn -c gluetun
+kubectl describe secret vpn-credentials
+```
 
-1. Check the Gluetun logs:
-   ```bash
-   kubectl logs deployment/qbittorrent-vpn -c gluetun
-   ```
+Enable debug logging for more detail:
 
-2. Verify your credentials are correct:
-   ```bash
-   kubectl describe secret vpn-credentials
-   ```
+```yaml
+gluetun:
+  extraEnv:
+    - name: LOG_LEVEL
+      value: "debug"
+```
 
-3. Try setting the log level to debug for more detailed information:
-   ```yaml
-   gluetun:
-     extraEnv:
-       - name: LOG_LEVEL
-         value: "debug"
-   ```
+### Directory Creation Errors
 
-### qBittorrent Can't Create Directories
+Ensure the init container is enabled and `fsGroup` is set in `podSecurityContext`.
 
-If you see errors like "Could not create required directory":
+### Firewall / Network Issues
 
-1. Make sure the init container is enabled and properly configured
-2. Ensure proper `fsGroup` is set in the `podSecurityContext`
-3. Check that the persistence volume allows the correct permissions
+Gluetun requires `privileged: true` and `NET_ADMIN` capability. Verify `/dev/net/tun` is mounted correctly.
 
-### Firewall/Security Issues
+## Links
 
-If you encounter iptables or network issues:
-
-1. Ensure the Gluetun container has `privileged: true`
-2. Verify the `NET_ADMIN` capability is added
-3. Check that the `/dev/net/tun` device is correctly mounted
-
-## License
-
-This chart is licensed under the MIT License.
-
-## Acknowledgements
-
-- [Gluetun](https://github.com/qdm12/gluetun) by [qdm12](https://github.com/qdm12)
-- [LinuxServer.io](https://linuxserver.io/) for the qBittorrent container
-- The qBittorrent team for the excellent torrent client
+- [qBittorrent](https://www.qbittorrent.org/)
+- [Gluetun GitHub](https://github.com/qdm12/gluetun)
+- [Gluetun Provider Setup](https://github.com/qdm12/gluetun-wiki/tree/main/setup/providers)
+- [Chart Source](https://github.com/rtomik/helm-charts/tree/main/charts/qbittorrent-vpn)

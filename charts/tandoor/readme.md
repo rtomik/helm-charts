@@ -1,30 +1,42 @@
 # Tandoor Recipes Helm Chart
 
-A Helm chart for deploying [Tandoor Recipes](https://github.com/TandoorRecipes/recipes) on Kubernetes.
+A Helm chart for deploying [Tandoor Recipes](https://github.com/TandoorRecipes/recipes), a recipe management application, on Kubernetes.
 
-Tandoor is a recipe management application that allows you to manage your recipes, plan meals, and create shopping lists.
+## Introduction
 
-Source code can be found here:
-- https://github.com/rtomik/helm-charts/tree/main/charts/tandoor
+This chart deploys Tandoor Recipes on a Kubernetes cluster. Tandoor supports PostgreSQL databases, LDAP/OIDC authentication, S3 object storage, email notifications, AI features, and Food Data Central API integration for nutrition data.
+
+Source code: https://github.com/rtomik/helm-charts/tree/main/charts/tandoor
 
 ## Prerequisites
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- PV provisioner support in the underlying infrastructure
-- **External PostgreSQL database** (required - this chart does NOT include PostgreSQL)
+- **External PostgreSQL database** (required — this chart does not include PostgreSQL)
+- PV provisioner support
 
 ## Installing the Chart
 
 ```bash
 helm repo add rtomik https://rtomik.github.io/helm-charts
-helm repo update
-helm install tandoor rtomik/tandoor -f values.yaml
+helm install tandoor rtomik/tandoor
 ```
 
-## Usage Examples
+## Uninstalling the Chart
 
-### Minimal Configuration
+```bash
+helm uninstall tandoor
+```
+
+**Note**: PVCs are not deleted automatically. To remove them:
+
+```bash
+kubectl delete pvc -l app.kubernetes.io/name=tandoor
+```
+
+## Configuration Examples
+
+### Minimal Installation
 
 ```yaml
 postgresql:
@@ -38,7 +50,7 @@ config:
     value: "your-secret-key-at-least-50-characters-long-for-security-purposes"
 ```
 
-### Production Configuration
+### Production with Existing Secrets
 
 ```yaml
 postgresql:
@@ -52,19 +64,9 @@ config:
   secretKey:
     existingSecret: "tandoor-app-secret"
     secretKey: "secret-key"
-
   allowedHosts: "tandoor.example.com"
   csrfTrustedOrigins: "https://tandoor.example.com"
   timezone: "Europe/Berlin"
-
-  # Optional: OpenID Connect with Authentik
-  # oidc:
-  #   enabled: true
-  #   providerId: "authentik"
-  #   providerName: "Authentik"
-  #   clientId: "your-client-id"
-  #   clientSecret: "your-client-secret"
-  #   serverUrl: "https://authentik.company/application/o/tandoor/.well-known/openid-configuration"
 
 ingress:
   enabled: true
@@ -84,7 +86,6 @@ ingress:
 persistence:
   staticfiles:
     enabled: true
-    # existingClaim: "my-existing-pvc"
     storageClass: "longhorn"
     size: 2Gi
   mediafiles:
@@ -101,323 +102,349 @@ resources:
     memory: 256Mi
 ```
 
+### OIDC with Authentik
 
-## Configuration
+```yaml
+config:
+  oidc:
+    enabled: true
+    providerId: "authentik"
+    providerName: "Authentik"
+    clientId: "your-client-id"
+    clientSecret: "your-client-secret"
+    serverUrl: "https://authentik.company/application/o/tandoor/.well-known/openid-configuration"
+```
 
-All configuration options are based on the official Tandoor documentation:
-https://docs.tandoor.dev/system/configuration/
+### S3 Object Storage
 
-The following table lists the configurable parameters and their default values.
-
-### Global Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `nameOverride` | String to partially override the release name | `""` |
-| `fullnameOverride` | String to fully override the release name | `""` |
-
-### Image Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `image.repository` | Tandoor image repository | `vabene1111/recipes` |
-| `image.tag` | Tandoor image tag | `2.3.5` |
-| `image.pullPolicy` | Tandoor image pull policy | `IfNotPresent` |
-
-### Deployment Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `replicaCount` | Number of Tandoor replicas | `1` |
-| `revisionHistoryLimit` | Number of old ReplicaSets to retain | `3` |
-
-### PostgreSQL Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `postgresql.host` | PostgreSQL host | `postgresql.default.svc.cluster.local` |
-| `postgresql.port` | PostgreSQL port | `5432` |
-| `postgresql.database` | PostgreSQL database name | `tandoor` |
-| `postgresql.username` | PostgreSQL username | `tandoor` |
-| `postgresql.password` | PostgreSQL password (not recommended for production) | `""` |
-| `postgresql.existingSecret` | Existing secret with PostgreSQL credentials | `""` |
-| `postgresql.passwordKey` | Key in existing secret for PostgreSQL password | `postgresql-password` |
-
-### Security Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.secretKey.value` | Django secret key (at least 50 characters) | `""` |
-| `config.secretKey.existingSecret` | Existing secret for Django secret key | `""` |
-| `config.secretKey.secretKey` | Key in existing secret for Django secret key | `secret-key` |
-| `config.allowedHosts` | Allowed hosts for HTTP Host Header validation | `*` |
-| `config.csrfTrustedOrigins` | CSRF trusted origins | `""` |
-| `config.corsAllowOrigins` | Enable CORS allow all origins | `false` |
-
-### Server Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.tandoorPort` | Port where Tandoor exposes its web server | `8080` |
-| `config.gunicornWorkers` | Number of Gunicorn worker processes | `3` |
-| `config.gunicornThreads` | Number of Gunicorn threads per worker | `2` |
-| `config.gunicornTimeout` | Gunicorn request timeout in seconds | `30` |
-| `config.gunicornMedia` | Enable media serving via Gunicorn | `0` |
-| `config.timezone` | Application timezone | `UTC` |
-| `config.scriptName` | URL path base for subfolder deployments | `""` |
-| `config.sessionCookieDomain` | Session cookie domain | `""` |
-| `config.sessionCookieName` | Session cookie identifier | `sessionid` |
-
-### Feature Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.enableSignup` | Allow user registration | `false` |
-| `config.enableMetrics` | Enable Prometheus metrics at /metrics | `false` |
-| `config.enablePdfExport` | Enable recipe PDF export | `false` |
-| `config.sortTreeByName` | Sort keywords/foods alphabetically | `false` |
-
-### Social Authentication
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.socialDefaultAccess` | Space ID for auto-joining new social auth users | `0` |
-| `config.socialDefaultGroup` | Default group for new users (guest/user/admin) | `guest` |
-| `config.socialProviders` | Comma-separated OAuth provider list | `""` |
-| `config.socialAccountProviders` | SOCIALACCOUNT_PROVIDERS JSON (for complex setups) | `""` |
-
-### OpenID Connect (OIDC) Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.oidc.enabled` | Enable OpenID Connect authentication | `false` |
-| `config.oidc.providerId` | Provider ID (e.g., authentik, keycloak) | `authentik` |
-| `config.oidc.providerName` | Display name on login page | `Authentik` |
-| `config.oidc.clientId` | Client ID from OIDC provider | `""` |
-| `config.oidc.clientSecret` | Client Secret from OIDC provider | `""` |
-| `config.oidc.serverUrl` | OpenID Connect well-known configuration URL | `""` |
-
-### LDAP Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.ldap.enabled` | Enable LDAP authentication | `false` |
-| `config.ldap.serverUri` | LDAP server URI | `""` |
-| `config.ldap.bindDn` | LDAP bind distinguished name | `""` |
-| `config.ldap.bindPassword` | LDAP bind password | `""` |
-| `config.ldap.userSearchBaseDn` | LDAP user search base | `""` |
-| `config.ldap.tlsCacertFile` | LDAP TLS CA certificate file | `""` |
-| `config.ldap.startTls` | Enable LDAP StartTLS | `false` |
-| `config.ldap.existingSecret` | Existing secret for LDAP credentials | `""` |
-| `config.ldap.bindPasswordKey` | Key in existing secret for LDAP password | `ldap-bind-password` |
-
-### Remote User Authentication
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.remoteUserAuth` | Enable REMOTE-USER header authentication | `false` |
+```yaml
+config:
+  s3:
+    enabled: true
+    bucketName: "tandoor-media"
+    regionName: "us-east-1"
+    endpointUrl: "https://minio.example.com"
+    existingSecret: "tandoor-s3-secret"
+```
 
 ### Email Configuration
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.email.host` | SMTP server hostname | `""` |
-| `config.email.port` | SMTP server port | `25` |
-| `config.email.user` | SMTP authentication username | `""` |
-| `config.email.password` | SMTP authentication password | `""` |
-| `config.email.useTls` | Enable TLS for email | `false` |
-| `config.email.useSsl` | Enable SSL for email | `false` |
-| `config.email.defaultFrom` | Default from email address | `webmaster@localhost` |
+```yaml
+config:
+  email:
+    host: "smtp.example.com"
+    port: 587
+    useTls: true
+    defaultFrom: "tandoor@example.com"
+    existingSecret: "tandoor-email-secret"
+    passwordKey: "email-password"
+```
+
+### LDAP Authentication
+
+```yaml
+config:
+  ldap:
+    enabled: true
+    serverUri: "ldap://ldap.example.com"
+    bindDn: "cn=admin,dc=example,dc=com"
+    bindPassword: "bind-password"
+    userSearchBaseDn: "ou=users,dc=example,dc=com"
+    existingSecret: "tandoor-ldap-secret"
+    bindPasswordKey: "ldap-bind-password"
+```
+
+## Parameters
+
+### Global Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `nameOverride` | Override the release name | `""` |
+| `fullnameOverride` | Fully override the release name | `""` |
+
+### Image Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `image.repository` | Tandoor image repository | `vabene1111/recipes` |
+| `image.tag` | Image tag | `2.3.5` |
+| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+
+### Deployment Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `replicaCount` | Number of replicas | `1` |
+| `revisionHistoryLimit` | Revisions to retain | `3` |
+| `podSecurityContext.fsGroup` | Filesystem group ID | `0` |
+| `containerSecurityContext.runAsUser` | User ID | `0` |
+| `containerSecurityContext.runAsGroup` | Group ID | `0` |
+| `containerSecurityContext.allowPrivilegeEscalation` | Allow privilege escalation | `false` |
+| `nodeSelector` | Node selector | `{}` |
+| `tolerations` | Tolerations | `[]` |
+| `affinity` | Affinity rules | `{}` |
+
+### Service Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `8080` |
+
+### Ingress Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `ingress.enabled` | Enable ingress | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | See values.yaml |
+| `ingress.hosts` | Ingress hosts | See values.yaml |
+| `ingress.tls` | TLS configuration | See values.yaml |
+
+### PostgreSQL Configuration (Required)
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `postgresql.host` | PostgreSQL host | `postgresql.default.svc.cluster.local` |
+| `postgresql.port` | PostgreSQL port | `5432` |
+| `postgresql.database` | Database name | `tandoor` |
+| `postgresql.username` | Username | `tandoor` |
+| `postgresql.password` | Password | `""` |
+| `postgresql.existingSecret` | Existing secret name | `""` |
+| `postgresql.passwordKey` | Key for password in secret | `postgresql-password` |
+
+### Security Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.secretKey.value` | Django secret key (min 50 chars) | `""` |
+| `config.secretKey.existingSecret` | Existing secret for secret key | `""` |
+| `config.secretKey.secretKey` | Key in secret | `secret-key` |
+| `config.allowedHosts` | Allowed HTTP hosts | `*` |
+| `config.csrfTrustedOrigins` | CSRF trusted origins | `""` |
+| `config.corsAllowOrigins` | Allow all CORS origins | `false` |
+
+### Server Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.tandoorPort` | Web server port | `8080` |
+| `config.gunicornWorkers` | Gunicorn workers | `3` |
+| `config.gunicornThreads` | Gunicorn threads per worker | `2` |
+| `config.gunicornTimeout` | Gunicorn timeout (seconds) | `30` |
+| `config.gunicornMedia` | Serve media via Gunicorn | `0` |
+| `config.timezone` | Timezone | `UTC` |
+| `config.scriptName` | URL path base for subfolder | `""` |
+| `config.sessionCookieDomain` | Session cookie domain | `""` |
+| `config.sessionCookieName` | Session cookie name | `sessionid` |
+
+### Feature Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.enableSignup` | Allow user registration | `false` |
+| `config.enableMetrics` | Enable Prometheus metrics | `false` |
+| `config.enablePdfExport` | Enable PDF export | `false` |
+| `config.sortTreeByName` | Sort keywords alphabetically | `false` |
+
+### OIDC Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.oidc.enabled` | Enable OIDC | `false` |
+| `config.oidc.providerId` | Provider ID | `authentik` |
+| `config.oidc.providerName` | Provider display name | `Authentik` |
+| `config.oidc.clientId` | Client ID | `""` |
+| `config.oidc.clientSecret` | Client secret | `""` |
+| `config.oidc.serverUrl` | Well-known configuration URL | `""` |
+
+### LDAP Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.ldap.enabled` | Enable LDAP | `false` |
+| `config.ldap.serverUri` | LDAP server URI | `""` |
+| `config.ldap.bindDn` | Bind DN | `""` |
+| `config.ldap.bindPassword` | Bind password | `""` |
+| `config.ldap.userSearchBaseDn` | User search base DN | `""` |
+| `config.ldap.tlsCacertFile` | TLS CA cert file | `""` |
+| `config.ldap.startTls` | Enable StartTLS | `false` |
+| `config.ldap.existingSecret` | Existing secret for LDAP | `""` |
+| `config.ldap.bindPasswordKey` | Key for bind password in secret | `ldap-bind-password` |
+
+### Email Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.email.host` | SMTP host | `""` |
+| `config.email.port` | SMTP port | `25` |
+| `config.email.user` | SMTP username | `""` |
+| `config.email.password` | SMTP password | `""` |
+| `config.email.useTls` | Enable TLS | `false` |
+| `config.email.useSsl` | Enable SSL | `false` |
+| `config.email.defaultFrom` | Default from address | `webmaster@localhost` |
 | `config.email.accountEmailSubjectPrefix` | Email subject prefix | `[Tandoor Recipes]` |
-| `config.email.existingSecret` | Existing secret for email credentials | `""` |
-| `config.email.passwordKey` | Key in existing secret for email password | `email-password` |
+| `config.email.existingSecret` | Existing secret for email | `""` |
+| `config.email.passwordKey` | Key for password in secret | `email-password` |
 
-### S3/Object Storage Configuration
+### S3 Storage Configuration
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.s3.enabled` | Enable S3 storage for media files | `false` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.s3.enabled` | Enable S3 storage | `false` |
 | `config.s3.accessKey` | S3 access key | `""` |
 | `config.s3.secretAccessKey` | S3 secret access key | `""` |
 | `config.s3.bucketName` | S3 bucket name | `""` |
-| `config.s3.regionName` | S3 region name | `""` |
-| `config.s3.endpointUrl` | Custom S3 endpoint URL (for MinIO) | `""` |
-| `config.s3.customDomain` | CDN/proxy domain for S3 | `""` |
-| `config.s3.querystringAuth` | Use signed URLs for S3 objects | `true` |
+| `config.s3.regionName` | S3 region | `""` |
+| `config.s3.endpointUrl` | Custom S3 endpoint (MinIO) | `""` |
+| `config.s3.customDomain` | CDN/proxy domain | `""` |
+| `config.s3.querystringAuth` | Use signed URLs | `true` |
 | `config.s3.querystringExpire` | Signed URL expiration (seconds) | `3600` |
-| `config.s3.existingSecret` | Existing secret for S3 credentials | `""` |
+| `config.s3.existingSecret` | Existing secret for S3 | `""` |
 
-### AI Features
+### Social Authentication
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.socialDefaultAccess` | Space ID for auto-join | `0` |
+| `config.socialDefaultGroup` | Default group (`guest`/`user`/`admin`) | `guest` |
+| `config.socialProviders` | OAuth providers (comma-separated) | `""` |
+| `config.remoteUserAuth` | Enable REMOTE-USER header auth | `false` |
+
+### AI Configuration
+
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.ai.enabled` | Enable AI features | `false` |
-| `config.ai.creditsMonthly` | Monthly AI credits per space | `100` |
-| `config.ai.rateLimit` | AI API rate limit | `60/hour` |
+| `config.ai.creditsMonthly` | Monthly credits per space | `100` |
+| `config.ai.rateLimit` | AI rate limit | `60/hour` |
 
 ### External Services
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.fdcApiKey` | Food Data Central API key | `DEMO_KEY` |
-| `config.disableExternalConnectors` | Disable all external connectors | `false` |
+| `config.disableExternalConnectors` | Disable external connectors | `false` |
 | `config.externalConnectorsQueueSize` | External connectors queue size | `100` |
 
 ### Rate Limiting
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.ratelimitUrlImportRequests` | Rate limit for URL imports | `""` |
 | `config.drfThrottleRecipeUrlImport` | DRF throttle for recipe URL import | `60/hour` |
 
-### Space Defaults
+### Space & User Defaults
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.spaceDefaultMaxRecipes` | Max recipes per space (0=unlimited) | `0` |
 | `config.spaceDefaultMaxUsers` | Max users per space (0=unlimited) | `0` |
 | `config.spaceDefaultMaxFiles` | Max file storage in MB (0=unlimited) | `0` |
-| `config.spaceDefaultAllowSharing` | Allow public recipe sharing | `true` |
-
-### User Preference Defaults
-
-| Name | Description | Value |
-|------|-------------|-------|
+| `config.spaceDefaultAllowSharing` | Allow public sharing | `true` |
 | `config.fractionPrefDefault` | Default fraction display | `false` |
-| `config.commentPrefDefault` | Enable comments by default | `true` |
+| `config.commentPrefDefault` | Comments enabled by default | `true` |
 | `config.stickyNavPrefDefault` | Sticky navbar by default | `true` |
 | `config.maxOwnedSpacesPrefDefault` | Max spaces per user | `100` |
 
-### Cosmetic Configuration
+### Performance & Cosmetic
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.shoppingMinAutosyncInterval` | Min auto-sync interval (minutes) | `5` |
+| `config.exportFileCacheDuration` | Export cache duration (seconds) | `600` |
 | `config.unauthenticatedThemeFromSpace` | Space ID for unauthenticated theme | `0` |
 | `config.forceThemeFromSpace` | Space ID to enforce theme globally | `0` |
 
-### Performance Configuration
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.shoppingMinAutosyncInterval` | Min auto-sync interval (minutes) | `5` |
-| `config.exportFileCacheDuration` | Export cache duration (seconds) | `600` |
-
 ### Legal URLs
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.termsUrl` | Terms of service URL | `""` |
 | `config.privacyUrl` | Privacy policy URL | `""` |
 | `config.imprintUrl` | Legal imprint URL | `""` |
 
 ### hCaptcha Configuration
 
-| Name | Description | Value |
-|------|-------------|-------|
+| Name | Description | Default |
+|------|-------------|---------|
 | `config.hcaptcha.siteKey` | hCaptcha site key | `""` |
-| `config.hcaptcha.secret` | hCaptcha secret key | `""` |
+| `config.hcaptcha.secret` | hCaptcha secret | `""` |
 | `config.hcaptcha.existingSecret` | Existing secret for hCaptcha | `""` |
-
-### Debugging
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `config.debug` | Enable Django debug mode | `false` |
-| `config.debugToolbar` | Enable Django Debug Toolbar | `false` |
-| `config.sqlDebug` | Enable SQL debug output | `false` |
-| `config.logLevel` | Application log level | `WARNING` |
-| `config.gunicornLogLevel` | Gunicorn log level | `info` |
-
-### Service Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `service.type` | Kubernetes Service type | `ClusterIP` |
-| `service.port` | Service HTTP port | `8080` |
-
-### Ingress Parameters
-
-| Name | Description | Value |
-|------|-------------|-------|
-| `ingress.enabled` | Enable ingress | `false` |
-| `ingress.className` | Ingress class name | `""` |
-| `ingress.annotations` | Ingress annotations | See values.yaml |
-| `ingress.hosts` | Ingress hosts configuration | See values.yaml |
-| `ingress.tls` | Ingress TLS configuration | See values.yaml |
 
 ### Persistence Parameters
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `persistence.staticfiles.enabled` | Enable static files persistence | `true` |
-| `persistence.staticfiles.existingClaim` | Use existing PVC for static files | `""` |
-| `persistence.staticfiles.storageClass` | Storage class for static files | `""` |
-| `persistence.staticfiles.accessMode` | Access mode for static files PVC | `ReadWriteOnce` |
-| `persistence.staticfiles.size` | Size of static files PVC | `1Gi` |
-| `persistence.mediafiles.enabled` | Enable media files persistence | `true` |
-| `persistence.mediafiles.existingClaim` | Use existing PVC for media files | `""` |
-| `persistence.mediafiles.storageClass` | Storage class for media files | `""` |
-| `persistence.mediafiles.accessMode` | Access mode for media files PVC | `ReadWriteOnce` |
-| `persistence.mediafiles.size` | Size of media files PVC | `5Gi` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `persistence.staticfiles.enabled` | Enable static files PVC | `true` |
+| `persistence.staticfiles.existingClaim` | Existing PVC for static files | `""` |
+| `persistence.staticfiles.storageClass` | Storage class | `""` |
+| `persistence.staticfiles.accessMode` | Access mode | `ReadWriteOnce` |
+| `persistence.staticfiles.size` | PVC size | `1Gi` |
+| `persistence.mediafiles.enabled` | Enable media files PVC | `true` |
+| `persistence.mediafiles.existingClaim` | Existing PVC for media files | `""` |
+| `persistence.mediafiles.storageClass` | Storage class | `""` |
+| `persistence.mediafiles.accessMode` | Access mode | `ReadWriteOnce` |
+| `persistence.mediafiles.size` | PVC size | `5Gi` |
 
-### Pod Security Context
+### Resource Parameters
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `podSecurityContext.runAsNonRoot` | Run as non-root user | `true` |
-| `podSecurityContext.runAsUser` | User ID to run as | `1000` |
-| `podSecurityContext.fsGroup` | Group ID for filesystem | `1000` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `resources` | Resource limits and requests | `{}` |
 
-### Container Security Context
+### Health Check Parameters
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `containerSecurityContext.allowPrivilegeEscalation` | Allow privilege escalation | `false` |
-| `containerSecurityContext.readOnlyRootFilesystem` | Read-only root filesystem | `false` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `probes.liveness.enabled` | Enable liveness probe | `true` |
+| `probes.liveness.path` | Liveness probe path | `/` |
+| `probes.liveness.initialDelaySeconds` | Liveness initial delay | `30` |
+| `probes.liveness.periodSeconds` | Liveness period | `10` |
+| `probes.readiness.enabled` | Enable readiness probe | `true` |
+| `probes.readiness.path` | Readiness probe path | `/` |
+| `probes.readiness.initialDelaySeconds` | Readiness initial delay | `15` |
+| `probes.readiness.periodSeconds` | Readiness period | `5` |
 
 ### Autoscaling Parameters
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `autoscaling.enabled` | Enable autoscaling | `false` |
-| `autoscaling.minReplicas` | Minimum replicas | `1` |
-| `autoscaling.maxReplicas` | Maximum replicas | `3` |
-| `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilization | `80` |
-| `autoscaling.targetMemoryUtilizationPercentage` | Target memory utilization | `80` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `autoscaling.enabled` | Enable HPA | `false` |
+| `autoscaling.minReplicas` | Min replicas | `1` |
+| `autoscaling.maxReplicas` | Max replicas | `3` |
+| `autoscaling.targetCPUUtilizationPercentage` | Target CPU | `80` |
+| `autoscaling.targetMemoryUtilizationPercentage` | Target memory | `80` |
 
-### Probes Configuration
+### Debugging
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `probes.liveness.enabled` | Enable liveness probe | `true` |
-| `probes.liveness.initialDelaySeconds` | Initial delay for liveness probe | `30` |
-| `probes.liveness.periodSeconds` | Period for liveness probe | `10` |
-| `probes.readiness.enabled` | Enable readiness probe | `true` |
-| `probes.readiness.initialDelaySeconds` | Initial delay for readiness probe | `15` |
-| `probes.readiness.periodSeconds` | Period for readiness probe | `5` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `config.debug` | Enable Django debug mode | `false` |
+| `config.debugToolbar` | Enable Debug Toolbar | `false` |
+| `config.sqlDebug` | Enable SQL debug | `false` |
+| `config.logLevel` | Application log level | `WARNING` |
+| `config.gunicornLogLevel` | Gunicorn log level | `info` |
 
 ### Additional Configuration
 
-| Name | Description | Value |
-|------|-------------|-------|
-| `env` | Additional environment variables | `[]` |
-| `extraEnvFrom` | Additional environment variables from secrets | `[]` |
-| `extraVolumes` | Additional volumes | `[]` |
-| `extraVolumeMounts` | Additional volume mounts | `[]` |
-| `nodeSelector` | Node selector | `{}` |
-| `tolerations` | Tolerations | `[]` |
-| `affinity` | Affinity rules | `{}` |
+| Name | Description | Default |
+|------|-------------|---------|
+| `env` | Extra environment variables | `[]` |
+| `extraEnvFrom` | Extra env from secrets/configmaps | `[]` |
+| `extraVolumes` | Extra volumes | `[]` |
+| `extraVolumeMounts` | Extra volume mounts | `[]` |
 
-## Uninstalling the Chart
+## Troubleshooting
 
-```bash
-helm uninstall tandoor
-```
-
-**Note:** PVCs are not automatically deleted. To remove them:
+- **CSRF Errors**: Set `config.csrfTrustedOrigins` to your domain URL including the scheme
+- **Login Issues**: Verify OIDC/LDAP configuration and callback URLs
+- **Missing Media**: Check persistence configuration and S3 connectivity if enabled
 
 ```bash
-kubectl delete pvc -l app.kubernetes.io/name=tandoor
+kubectl logs -f deployment/tandoor
+kubectl describe pod -l app.kubernetes.io/name=tandoor
 ```
 
 ## Links
@@ -425,3 +452,4 @@ kubectl delete pvc -l app.kubernetes.io/name=tandoor
 - [Tandoor Recipes GitHub](https://github.com/TandoorRecipes/recipes)
 - [Tandoor Documentation](https://docs.tandoor.dev/)
 - [Configuration Reference](https://docs.tandoor.dev/system/configuration/)
+- [Chart Source](https://github.com/rtomik/helm-charts/tree/main/charts/tandoor)

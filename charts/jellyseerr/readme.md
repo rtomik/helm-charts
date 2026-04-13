@@ -4,10 +4,9 @@ A Helm chart for deploying [Jellyseerr](https://github.com/fallenbagel/jellyseer
 
 ## Introduction
 
-This chart deploys Jellyseerr on a Kubernetes cluster using the Helm package manager. Jellyseerr is a fork of Overseerr for Jellyfin support.
+This chart deploys Jellyseerr, a media request management application for Jellyfin, on a Kubernetes cluster using the Helm package manager. Jellyseerr is a fork of Overseerr with native Jellyfin support.
 
-Source code can be found here:
-- https://github.com/rtomik/helm-charts/tree/main/charts/jellyseerr
+Source code: https://github.com/rtomik/helm-charts/tree/main/charts/jellyseerr
 
 ## Prerequisites
 
@@ -17,104 +16,35 @@ Source code can be found here:
 
 ## Installing the Chart
 
-To install the chart with the release name `jellyseerr`:
-
 ```bash
-helm repo add rtomik-charts https://rtomik.github.io/helm-charts
-helm install jellyseerr rtomik-charts/jellyseerr 
+helm repo add rtomik https://rtomik.github.io/helm-charts
+helm install jellyseerr rtomik/jellyseerr
 ```
 
-> **Tip**: List all releases using `helm list`
-
 ## Uninstalling the Chart
-
-To uninstall/delete the `jellyseerr` deployment:
 
 ```bash
 helm uninstall jellyseerr
 ```
 
-## Parameters
+## Configuration Examples
 
-### Global parameters
+### Minimal Installation
 
-| Name                   | Description                                                   | Value  |
-|------------------------|---------------------------------------------------------------|--------|
-| `nameOverride`         | String to partially override the release name                 | `""`   |
-| `fullnameOverride`     | String to fully override the release name                     | `""`   |
+```yaml
+ingress:
+  enabled: true
+  hosts:
+    - host: jellyseerr.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - jellyseerr.example.com
+```
 
-### Image parameters
-
-| Name                    | Description                                                  | Value                          |
-|-------------------------|--------------------------------------------------------------|--------------------------------|
-| `image.repository`      | Jellyseerr image repository                                  | `ghcr.io/fallenbagel/jellyseerr` |
-| `image.tag`             | Jellyseerr image tag                                         | `latest`                       |
-| `image.pullPolicy`      | Jellyseerr image pull policy                                 | `IfNotPresent`                 |
-| `imagePullSecrets`      | Global Docker registry secret names as an array              | `[]`                           |
-
-### Deployment parameters
-
-| Name                                 | Description                                      | Value     |
-|--------------------------------------|--------------------------------------------------|-----------|
-| `replicaCount`                       | Number of Jellyseerr replicas                    | `1`       |
-| `revisionHistoryLimit`               | Number of revisions to retain for rollback       | `3`       |
-| `podSecurityContext.runAsNonRoot`    | Run containers as non-root user                  | `true`    |
-| `podSecurityContext.runAsUser`       | User ID for the container                        | `1000`    |
-| `podSecurityContext.fsGroup`         | Group ID for the container filesystem            | `1000`    |
-| `containerSecurityContext`           | Security context for the container               | See values.yaml |
-| `nodeSelector`                       | Node labels for pod assignment                   | `{}`      |
-| `tolerations`                        | Tolerations for pod assignment                   | `[]`      |
-| `affinity`                           | Affinity for pod assignment                      | `{}`      |
-
-### Service parameters
-
-| Name                       | Description                                  | Value       |
-|----------------------------|----------------------------------------------|-------------|
-| `service.type`             | Kubernetes Service type                      | `ClusterIP` |
-| `service.port`             | Service HTTP port                            | `5055`      |
-
-### Ingress parameters
-
-| Name                       | Description                                  | Value                 |
-|----------------------------|----------------------------------------------|------------------------|
-| `ingress.enabled`          | Enable ingress record generation             | `false`               |
-| `ingress.className`        | IngressClass name                            | `""`                  |
-| `ingress.annotations`      | Additional annotations for the Ingress resource | `{}`               |
-| `ingress.hosts`            | Array of host and path objects               | See values.yaml       |
-| `ingress.tls`              | TLS configuration                            | `[]`                  |
-
-### Persistence parameters
-
-| Name                          | Description                                  | Value           |
-|-------------------------------|----------------------------------------------|-----------------|
-| `persistence.enabled`         | Enable persistence using PVC                 | `true`          |
-| `persistence.existingClaim`   | Use an existing PVC                          | `""`            |
-| `persistence.storageClass`    | PVC Storage Class                            | `""`            |
-| `persistence.accessMode`      | PVC Access Mode                              | `ReadWriteOnce` |
-| `persistence.size`            | PVC Storage Size                             | `1Gi`           |
-| `persistence.annotations`     | Additional custom annotations for the PVC    | `{}`            |
-
-### Environment variables
-
-| Name                     | Description                                  | Value           |
-|--------------------------|----------------------------------------------|-----------------|
-| `env`                    | Environment variables for Jellyseerr          | See values.yaml |
-| `extraEnv`               | Additional environment variables             | `[]`            |
-
-### Resources parameters
-
-| Name                     | Description                                  | Value           |
-|--------------------------|----------------------------------------------|-----------------|
-| `resources.limits`       | The resources limits for containers          | See values.yaml |
-| `resources.requests`     | The resources requests for containers        | See values.yaml |
-
-## Configuration
-
-The following table lists the configurable parameters of the Jellyseerr chart and their default values.
-
-### Environment Variables
-
-You can configure Jellyseerr by setting environment variables:
+### Custom Timezone and Logging
 
 ```yaml
 env:
@@ -126,20 +56,110 @@ env:
     value: "5055"
 ```
 
-### Using Persistence
-
-By default, persistence is enabled with a 1Gi volume:
-
-```yaml
-persistence:
-  enabled: true
-  size: 1Gi
-```
-
-You can also use an existing PVC:
+### Using an Existing PVC
 
 ```yaml
 persistence:
   enabled: true
   existingClaim: my-jellyseerr-pvc
 ```
+
+## Parameters
+
+### Global Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `nameOverride` | Override the release name | `""` |
+| `fullnameOverride` | Fully override the release name | `""` |
+
+### Image Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `image.repository` | Jellyseerr image repository | `ghcr.io/fallenbagel/jellyseerr` |
+| `image.tag` | Image tag | `2.5.2` |
+| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+
+### Deployment Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `replicaCount` | Number of replicas | `1` |
+| `revisionHistoryLimit` | Revisions to retain | `3` |
+| `podSecurityContext.runAsNonRoot` | Run as non-root | `true` |
+| `podSecurityContext.runAsUser` | User ID | `1000` |
+| `podSecurityContext.fsGroup` | Filesystem group ID | `1000` |
+| `nodeSelector` | Node selector | `{}` |
+| `tolerations` | Tolerations | `[]` |
+| `affinity` | Affinity rules | `{}` |
+| `podAnnotations` | Pod annotations | `{}` |
+
+### Service Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `service.type` | Service type | `ClusterIP` |
+| `service.port` | Service port | `5055` |
+
+### Ingress Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `ingress.enabled` | Enable ingress | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | `{}` |
+| `ingress.hosts` | Ingress hosts | See values.yaml |
+| `ingress.tls` | TLS configuration | `[]` |
+
+### Persistence Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `persistence.enabled` | Enable persistence | `true` |
+| `persistence.existingClaim` | Use an existing PVC | `""` |
+| `persistence.storageClass` | Storage class | `""` |
+| `persistence.accessMode` | Access mode | `ReadWriteOnce` |
+| `persistence.size` | PVC size | `1Gi` |
+| `persistence.annotations` | PVC annotations | `{}` |
+
+### Environment Variables
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `env` | Environment variables | See values.yaml |
+| `extraEnv` | Additional environment variables | `[]` |
+
+### Resource Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `resources` | Resource limits and requests | `{}` |
+
+### Health Check Parameters
+
+| Name | Description | Default |
+|------|-------------|---------|
+| `probes.liveness.enabled` | Enable liveness probe | `true` |
+| `probes.liveness.path` | Liveness probe path | `/api/v1/status` |
+| `probes.liveness.initialDelaySeconds` | Liveness initial delay | `30` |
+| `probes.liveness.periodSeconds` | Liveness period | `10` |
+| `probes.readiness.enabled` | Enable readiness probe | `true` |
+| `probes.readiness.path` | Readiness probe path | `/api/v1/status` |
+| `probes.readiness.initialDelaySeconds` | Readiness initial delay | `5` |
+| `probes.readiness.periodSeconds` | Readiness period | `5` |
+
+## Troubleshooting
+
+- **Application not starting**: Check that persistence is enabled and the PVC is accessible
+- **Timezone issues**: Set the `TZ` environment variable to your local timezone
+
+```bash
+kubectl logs deployment/jellyseerr -f
+kubectl describe pod -l app.kubernetes.io/name=jellyseerr
+```
+
+## Links
+
+- [Jellyseerr GitHub](https://github.com/fallenbagel/jellyseerr)
+- [Chart Source](https://github.com/rtomik/helm-charts/tree/main/charts/jellyseerr)
