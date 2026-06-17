@@ -1,0 +1,131 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: checkmk/check-mk-community
+  tag: "2.5.0p6"
+  pullPolicy: IfNotPresent
+
+## Deployment settings
+replicaCount: 1
+revisionHistoryLimit: 3
+
+# Pod security settings
+# Checkmk (OMD) requires root to manage monitoring sites and switch to site users.
+# fsGroup: 1000 matches Docker's --tmpfs uid=1000,gid=1000 so the site user can write to tmp.
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  fsGroup: 1000
+
+containerSecurityContext:
+  allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: false
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+## Pod annotations
+podAnnotations: {}
+
+## Service settings
+service:
+  type: ClusterIP
+  port: 5000
+  agentReceiverPort: 8000
+
+## Ingress settings
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: checkmk.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - checkmk.domain.com
+      # secretName: "existing-tls-secret"
+
+## Persistence settings for /omd/sites (all site data, configs, and RRDs)
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  annotations: {}
+
+## Resource limits and requests
+# resources:
+#   limits:
+#     cpu: 2000m
+#     memory: 2Gi
+#   requests:
+#     cpu: 500m
+#     memory: 512Mi
+
+## Application health checks
+# startupProbe absorbs slow first-boot (site init + DB creation) so liveness/readiness
+# don't fire until the site is actually up. Budget: 120 * 10s = 20 minutes max.
+probes:
+  startup:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 10
+    failureThreshold: 120
+    successThreshold: 1
+  liveness:
+    enabled: true
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 6
+    successThreshold: 1
+  readiness:
+    enabled: true
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+## Checkmk configuration
+config:
+  # Site name — also determines the URL path: /<siteId>/check_mk/
+  siteId: "cmk"
+
+  # Timezone (e.g. Europe/Berlin)
+  timezone: "UTC"
+
+  # Enable Livestatus TCP access (for distributed monitoring or external tools).
+  # When enabled, port 6557 is added to the Service.
+  livestatusTcp: false
+
+  # SMTP relay host for notifications (leave empty to disable)
+  mailRelayHost: ""
+
+  ## Admin (cmkadmin) password
+  adminPassword:
+    # Use an existing Kubernetes secret
+    existingSecret: ""
+    passwordKey: "cmk-password"
+    # Or set directly (not recommended for production)
+    value: "changeme"
+
+# Extra environment variables
+extraEnv: []
+  # - name: CMK_LIVESTATUS_TCP
+  #   value: "on"
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes
+extraVolumes: []

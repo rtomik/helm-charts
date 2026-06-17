@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "checkmk.fullname" . }}
+  labels:
+    {{- include "checkmk.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.service.agentReceiverPort }}
+      targetPort: agent-receiver
+      protocol: TCP
+      name: agent-receiver
+    {{- if .Values.config.livestatusTcp }}
+    - port: 6557
+      targetPort: 6557
+      protocol: TCP
+      name: livestatus
+    {{- end }}
+  selector:
+    {{- include "checkmk.selectorLabels" . | nindent 4 }}

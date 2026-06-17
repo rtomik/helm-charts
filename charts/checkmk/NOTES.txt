@@ -1,0 +1,56 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "checkmk.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "checkmk.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "checkmk.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "checkmk.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:5000/{{ .Values.config.siteId }}/check_mk/ to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 5000:5000
+{{- end }}
+
+2. Checkmk web interface is available at:
+   http://<host>/{{ .Values.config.siteId }}/check_mk/
+
+3. Default credentials:
+   Username: cmkadmin
+   Password: (as configured in config.adminPassword)
+
+4. Ports:
+   - Web interface:    {{ .Values.service.port }} → container 5000
+   - Agent Receiver:   {{ .Values.service.agentReceiverPort }} → container 8000
+
+{{- if .Values.persistence.enabled }}
+5. Persistent storage: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{ else }}{{ include "checkmk.fullname" . }}-sites{{ end }} ({{ .Values.persistence.size }})
+   Mounted at /omd/sites — contains all site data, configs, and RRD files.
+{{- else }}
+5. WARNING: No persistent storage enabled. All monitoring data will be lost on pod restart.
+   Enable persistence in values.yaml for production use.
+{{- end }}
+
+{{- if .Values.config.livestatusTcp }}
+6. Livestatus TCP is enabled. Ensure appropriate NetworkPolicies are in place.
+{{- end }}
+
+{{- if not .Values.config.adminPassword.existingSecret }}
+7. SECURITY NOTE: For production use, store the admin password in a Kubernetes Secret:
+   kubectl create secret generic checkmk-secrets \
+     --from-literal=cmk-password=<your-password>
+   Then set config.adminPassword.existingSecret=checkmk-secrets in your values.
+{{- else }}
+7. Admin password read from existing secret: {{ .Values.config.adminPassword.existingSecret }}
+{{- end }}
+
+For more information, see the official Checkmk Docker documentation:
+https://docs.checkmk.com/latest/en/introduction_docker.html
