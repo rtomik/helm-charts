@@ -1,5 +1,28 @@
 apiVersion: v1
 entries:
+  checkmk:
+  - apiVersion: v2
+    appVersion: 2.5.0p6
+    created: "2026-06-17T13:18:09.430240669Z"
+    description: Checkmk monitoring platform helm chart for Kubernetes
+    digest: b66940845567749bef5adb0b29ed83c2b2a6c2e3c006675ab949e915537170a3
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - monitoring
+    - checkmk
+    - infrastructure
+    - observability
+    maintainers:
+    - email: richard.tomik@proton.me
+      name: Richard Tomik
+    name: checkmk
+    sources:
+    - https://checkmk.com
+    - https://hub.docker.com/r/checkmk/check-mk-community
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/checkmk-0.1.0/checkmk-0.1.0.tgz
+    version: 0.1.0
   donetick:
   - apiVersion: v2
     appVersion: v0.1.60
@@ -600,4 +623,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2026-02-03T18:42:43.545311992Z"
+generated: "2026-06-17T13:18:11.337777834Z"
