@@ -96,6 +96,24 @@ spec:
             - name: PASSWORD_AUTH_ENABLED
               value: {{ .Values.config.passwordAuthEnabled | quote }}
             {{- end }}
+            {{- if .Values.config.enableRegistration }}
+            - name: ENABLE_REGISTRATION
+              value: {{ .Values.config.enableRegistration | quote }}
+            {{- end }}
+            - name: UPLOADS_DIR
+              value: {{ .Values.config.uploadsDir | quote }}
+            {{- if .Values.config.parserApiTimeoutMs }}
+            - name: PARSER_API_TIMEOUT_MS
+              value: {{ .Values.config.parserApiTimeoutMs | quote }}
+            {{- end }}
+            {{- if .Values.config.defaultLocale }}
+            - name: DEFAULT_LOCALE
+              value: {{ .Values.config.defaultLocale | quote }}
+            {{- end }}
+            {{- if .Values.config.enabledLocales }}
+            - name: ENABLED_LOCALES
+              value: {{ .Values.config.enabledLocales | quote }}
+            {{- end }}
             {{- if .Values.database.existingSecret }}
             - name: DB_USERNAME
               valueFrom:
@@ -163,6 +181,20 @@ spec:
             {{- if .Values.config.auth.oidc.wellKnown }}
             - name: OIDC_WELLKNOWN
               value: {{ .Values.config.auth.oidc.wellKnown | quote }}
+            {{- end }}
+            {{- if .Values.config.auth.oidc.claimMapping.enabled }}
+            - name: OIDC_CLAIM_MAPPING_ENABLED
+              value: "true"
+            {{- with .Values.config.auth.oidc.claimMapping.scopes }}
+            - name: OIDC_SCOPES
+              value: {{ . | quote }}
+            {{- end }}
+            - name: OIDC_GROUPS_CLAIM
+              value: {{ .Values.config.auth.oidc.claimMapping.groupsClaim | quote }}
+            - name: OIDC_ADMIN_GROUP
+              value: {{ .Values.config.auth.oidc.claimMapping.adminGroup | quote }}
+            - name: OIDC_HOUSEHOLD_GROUP_PREFIX
+              value: {{ .Values.config.auth.oidc.claimMapping.householdGroupPrefix | quote }}
             {{- end }}
             - name: OIDC_CLIENT_ID
               valueFrom:
@@ -234,7 +266,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: uploads
-              mountPath: /app/uploads
+              mountPath: {{ .Values.config.uploadsDir }}
             {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -256,6 +288,7 @@ spec:
             - "--no-sandbox"
             - "--disable-gpu"
             - "--disable-dev-shm-usage"
+            - "--disable-features=dbus"
             - "--remote-debugging-address=0.0.0.0"
             - "--remote-debugging-port={{ .Values.chrome.port }}"
             - "--headless"

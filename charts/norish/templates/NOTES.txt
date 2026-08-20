@@ -71,4 +71,4 @@ IMPORTANT CONFIGURATION NOTES:
    Configure ONE provider (OIDC, GitHub, or Google) to create your admin account.
    {{- end }}
 
-For more information, visit: https://github.com/norishapp/norish
+For more information, visit: https://github.com/norish-recipes/norish

@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: norishapp/norish
-  tag: "v0.16.2-beta"
+  tag: "v0.20.0-beta"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -96,7 +96,7 @@ probes:
     timeoutSeconds: 5
     failureThreshold: 30
     successThreshold: 1
-    path: /
+    path: /api/v1/health
   liveness:
     enabled: true
     initialDelaySeconds: 30
@@ -104,6 +104,11 @@ probes:
     timeoutSeconds: 5
     failureThreshold: 6
     successThreshold: 1
+    # Deliberately NOT /api/v1/health: since v0.18.1 that endpoint returns 503 when the
+    # database is unreachable, so a transient DB outage would restart the pod. The app
+    # root confirms the process is alive without coupling liveness to the database.
+    # Readiness still uses the health endpoint, which is what pulls the pod out of the
+    # Service during a DB outage.
     path: /
   readiness:
     enabled: true
@@ -112,7 +117,7 @@ probes:
     timeoutSeconds: 3
     failureThreshold: 3
     successThreshold: 1
-    path: /
+    path: /api/v1/health
 
 ## Application configuration
 config:
@@ -154,6 +159,26 @@ config:
   # Defaults to false if OIDC or OAuth is configured, true otherwise
   passwordAuthEnabled: ""
 
+  # Allow new users to register themselves (ENABLE_REGISTRATION)
+  # Leave empty to use the application default (false).
+  # The first account created always becomes the server owner/admin.
+  enableRegistration: ""
+
+  # Uploads directory inside the container (UPLOADS_DIR)
+  # Also used as the mount path for the uploads volume
+  uploadsDir: "/app/uploads"
+
+  # Timeout for recipe parser API calls in milliseconds (PARSER_API_TIMEOUT_MS)
+  # Leave empty to use the application default (15000)
+  parserApiTimeoutMs: ""
+
+  # Instance default locale, must match a supported locale (DEFAULT_LOCALE)
+  defaultLocale: ""
+
+  # Comma-separated list of enabled locales (ENABLED_LOCALES)
+  # Leave empty to enable all locales. Example: "en,de,nl"
+  enabledLocales: ""
+
   # Authentication provider configuration
   # Configure ONE provider for initial admin account creation
   # After first login, manage additional providers via Settings → Admin
@@ -172,6 +197,16 @@ config:
       existingSecret: ""
       clientIdKey: "oidc-client-id"
       clientSecretKey: "oidc-client-secret"
+
+      # Claim mapping: auto-assign the admin role and households from OIDC claims
+      # Disabled by default for security
+      claimMapping:
+        enabled: false
+        # Additional scopes to request, comma-separated (e.g. "groups" for Keycloak)
+        scopes: ""
+        groupsClaim: "groups"                      # Claim containing the user groups
+        adminGroup: "norish_admin"                 # Group that grants the server admin role
+        householdGroupPrefix: "norish_household_"  # Prefix for household groups
 
     # GitHub OAuth
     github:
