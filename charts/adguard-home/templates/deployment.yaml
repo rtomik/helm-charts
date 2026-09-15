@@ -31,6 +31,31 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.persistence.conf.enabled }}
+      initContainers:
+        - name: init-config
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # AdGuard Home's first-run setup wizard defaults the admin web interface
+          # port to 80, regardless of ports.web.port below - if a user accepts that
+          # default, the Service/Ingress (which forward to ports.web.port) end up
+          # pointing at the wrong container port and the UI becomes unreachable
+          # (502/Bad Gateway) as soon as setup completes. Seeding http.address here
+          # before the wizard ever runs makes it pre-fill the correct port instead.
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /opt/adguardhome/conf/AdGuardHome.yaml ]; then
+                cat > /opt/adguardhome/conf/AdGuardHome.yaml <<'CONF'
+              http:
+                address: 0.0.0.0:{{ .Values.ports.web.port }}
+              CONF
+              fi
+          volumeMounts:
+            - name: conf
+              mountPath: /opt/adguardhome/conf
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

@@ -2,7 +2,7 @@ apiVersion: v2
 name: adguard-home
 description: AdGuard Home helm chart for Kubernetes - Network-wide ad and tracker blocking DNS server
 type: application
-version: 0.0.1
+version: 0.0.2
 appVersion: "v0.107.79"
 maintainers:
   - name: Richard Tomik
