@@ -166,7 +166,7 @@ kubectl create secret generic donetick-oauth-secret \
 | Name | Description | Default |
 |------|-------------|---------|
 | `image.repository` | Donetick image repository | `donetick/donetick` |
-| `image.tag` | Image tag | `v0.1.60` |
+| `image.tag` | Image tag | `v0.1.79` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 

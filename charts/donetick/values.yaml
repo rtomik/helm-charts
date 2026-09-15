@@ -5,7 +5,7 @@ fullnameOverride: ""
 ## Image settings
 image:
   repository: donetick/donetick
-  tag: "v0.1.60"
+  tag: "v0.1.79"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
