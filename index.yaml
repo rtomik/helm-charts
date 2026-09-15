@@ -74,6 +74,26 @@ entries:
     version: 0.1.0
   donetick:
   - apiVersion: v2
+    appVersion: v0.1.79
+    created: "2026-09-15T10:14:44.504914003Z"
+    description: Donetick helm chart for Kubernetes
+    digest: 9df4d898b23b59995fea19e672f308df0ab696587ddff5133b482b6b5669da8e
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - productivity
+    - task-management
+    - donetick
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: donetick
+    sources:
+    - https://github.com/donetick/donetick
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/donetick-1.1.0/donetick-1.1.0.tgz
+    version: 1.1.0
+  - apiVersion: v2
     appVersion: v0.1.60
     created: "2025-12-19T08:04:26.061195717Z"
     description: Donetick helm chart for Kubernetes
@@ -694,4 +714,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2026-09-15T10:14:25.107419621Z"
+generated: "2026-09-15T10:14:44.504979115Z"
