@@ -1,0 +1,161 @@
+## Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+## Image settings
+image:
+  repository: adguard/adguardhome
+  tag: "v0.107.79"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+## Deployment settings
+## AdGuard Home keeps its state on disk (PVCs below) and is not designed to run as
+## multiple replicas against the same data - keep replicaCount at 1.
+replicaCount: 1
+revisionHistoryLimit: 3
+
+## Pod security settings
+## AdGuard Home's own startup check refuses to run on its first launch unless the
+## process euid is 0 ("this is the first launch of adguard home; you must run it as
+## administrator"), so - unlike most charts here - this one runs as root. Capabilities
+## are still dropped to the minimum the binary needs.
+podSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  fsGroup: 0
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+
+## Pod scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+
+## Use host networking. Required if you enable the DHCP server, and recommended
+## when exposing DNS so AdGuard Home sees real client IPs instead of the pod/service IP.
+hostNetwork: false
+
+## Ports exposed by AdGuard Home. web+dns are enabled by default; the rest are
+## optional protocols you can turn on as needed.
+## https://adguard-dns.io/kb/adguard-home/docker/
+ports:
+  web:
+    # Admin dashboard / setup wizard
+    port: 3000
+  dns:
+    # Plain DNS (TCP+UDP)
+    port: 53
+  dot:
+    # DNS-over-TLS / DNS-over-QUIC (TCP+UDP)
+    enabled: false
+    port: 853
+  https:
+    # DNS-over-HTTPS and HTTPS admin dashboard (TCP+UDP)
+    enabled: false
+    port: 443
+  dnscrypt:
+    # DNSCrypt (TCP+UDP)
+    enabled: false
+    port: 5443
+  dhcp:
+    # DHCP server (UDP 67/68). Requires hostNetwork: true.
+    enabled: false
+  pprof:
+    # Debug pprof API - leave disabled unless troubleshooting
+    enabled: false
+    port: 6060
+
+## Service settings
+## For exposing DNS to your LAN, set type to LoadBalancer (e.g. with MetalLB) and
+## add annotations/loadBalancerIP as needed, or use type: NodePort.
+service:
+  type: ClusterIP
+  annotations: {}
+  # loadBalancerIP: 192.168.1.53
+
+## Ingress settings (routes to the admin web UI only)
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: adguard.domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - adguard.domain.com
+
+## Persistence settings
+persistence:
+  work:
+    # /opt/adguardhome/work - query log, filter cache, stats
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+  conf:
+    # /opt/adguardhome/conf - AdGuardHome.yaml configuration
+    enabled: true
+    existingClaim: ""
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 100Mi
+    annotations: {}
+
+## Resource limits and requests
+resources: {}
+# resources:
+#   limits:
+#     cpu: 500m
+#     memory: 256Mi
+#   requests:
+#     cpu: 50m
+#     memory: 64Mi
+
+## Application health checks
+## Uses a TCP check against the admin web port. The DNS listener only comes up after
+## the first-run setup wizard is completed, so probing the DNS port instead would
+## fail/restart the pod before it's ever configured; the web port is always up.
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 15
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+## Extra environment variables
+extraEnv: []
+
+## Extra volume mounts
+extraVolumeMounts: []
+
+## Extra volumes
+extraVolumes: []

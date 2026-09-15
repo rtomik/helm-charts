@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "adguard-home.fullname" . }}
+  labels:
+    {{- include "adguard-home.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "adguard-home.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "adguard-home.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: web
+              containerPort: {{ .Values.ports.web.port }}
+              protocol: TCP
+            - name: dns-tcp
+              containerPort: {{ .Values.ports.dns.port }}
+              protocol: TCP
+            - name: dns-udp
+              containerPort: {{ .Values.ports.dns.port }}
+              protocol: UDP
+            {{- if .Values.ports.dot.enabled }}
+            - name: dot-tcp
+              containerPort: {{ .Values.ports.dot.port }}
+              protocol: TCP
+            - name: dot-udp
+              containerPort: {{ .Values.ports.dot.port }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.ports.https.enabled }}
+            - name: https-tcp
+              containerPort: {{ .Values.ports.https.port }}
+              protocol: TCP
+            - name: https-udp
+              containerPort: {{ .Values.ports.https.port }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.ports.dnscrypt.enabled }}
+            - name: dnscrypt-tcp
+              containerPort: {{ .Values.ports.dnscrypt.port }}
+              protocol: TCP
+            - name: dnscrypt-udp
+              containerPort: {{ .Values.ports.dnscrypt.port }}
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.ports.dhcp.enabled }}
+            - name: dhcp-server
+              containerPort: 67
+              protocol: UDP
+            - name: dhcp-client
+              containerPort: 68
+              protocol: UDP
+            {{- end }}
+            {{- if .Values.ports.pprof.enabled }}
+            - name: pprof
+              containerPort: {{ .Values.ports.pprof.port }}
+              protocol: TCP
+            {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            tcpSocket:
+              port: web
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+            successThreshold: {{ .Values.probes.liveness.successThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            tcpSocket:
+              port: web
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+            successThreshold: {{ .Values.probes.readiness.successThreshold }}
+          {{- end }}
+          {{- with .Values.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if .Values.persistence.work.enabled }}
+            - name: work
+              mountPath: /opt/adguardhome/work
+            {{- end }}
+            {{- if .Values.persistence.conf.enabled }}
+            - name: conf
+              mountPath: /opt/adguardhome/conf
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.persistence.work.enabled }}
+        - name: work
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.work.existingClaim | default (printf "%s-work" (include "adguard-home.fullname" .)) }}
+        {{- end }}
+        {{- if .Values.persistence.conf.enabled }}
+        - name: conf
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.conf.existingClaim | default (printf "%s-conf" (include "adguard-home.fullname" .)) }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

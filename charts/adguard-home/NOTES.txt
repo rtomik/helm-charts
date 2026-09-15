@@ -1,0 +1,55 @@
+1. Get the admin dashboard URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[?(@.name=='web')].nodePort}" services {{ include "adguard-home.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "adguard-home.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "adguard-home.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.ports.web.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "adguard-home.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:8080 to use the AdGuard Home setup wizard / dashboard"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:{{ .Values.ports.web.port }}
+{{- end }}
+
+2. On first access, complete the AdGuard Home setup wizard (admin user, DNS listener
+   interfaces/ports). The resulting AdGuardHome.yaml is written to the conf volume.
+
+3. DNS listens on port {{ .Values.ports.dns.port }} (TCP/UDP).
+{{- if not .Values.hostNetwork }}
+   NOTE: hostNetwork is disabled, so clients will see the Service/pod IP, not their
+   real IP, in the AdGuard Home query log/filters. Set hostNetwork: true, or use a
+   LoadBalancer Service with externalTrafficPolicy: Local, to preserve client IPs.
+{{- end }}
+{{- if .Values.ports.dhcp.enabled }}
+4. DHCP server is enabled on UDP 67/68.
+{{- if not .Values.hostNetwork }}
+   WARNING: DHCP requires hostNetwork: true to function correctly - it will not
+   work through a ClusterIP/LoadBalancer Service.
+{{- end }}
+{{- end }}
+
+{{- if or .Values.persistence.work.enabled .Values.persistence.conf.enabled }}
+
+5. Data is persisted using PVCs:
+{{- if .Values.persistence.work.enabled }}
+   - {{ .Values.persistence.work.existingClaim | default (printf "%s-work" (include "adguard-home.fullname" .)) }} (query log, filter cache, stats)
+{{- end }}
+{{- if .Values.persistence.conf.enabled }}
+   - {{ .Values.persistence.conf.existingClaim | default (printf "%s-conf" (include "adguard-home.fullname" .)) }} (AdGuardHome.yaml)
+{{- end }}
+{{- else }}
+
+5. WARNING: No persistence enabled. Configuration and filter data will be lost when
+   the pod restarts.
+{{- end }}
+
+For more information about using this Helm chart, please refer to the readme.md file.

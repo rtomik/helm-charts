@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "adguard-home.fullname" . }}
+  labels:
+    {{- include "adguard-home.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - name: web
+      port: {{ .Values.ports.web.port }}
+      targetPort: web
+      protocol: TCP
+    - name: dns-tcp
+      port: {{ .Values.ports.dns.port }}
+      targetPort: dns-tcp
+      protocol: TCP
+    - name: dns-udp
+      port: {{ .Values.ports.dns.port }}
+      targetPort: dns-udp
+      protocol: UDP
+    {{- if .Values.ports.dot.enabled }}
+    - name: dot-tcp
+      port: {{ .Values.ports.dot.port }}
+      targetPort: dot-tcp
+      protocol: TCP
+    - name: dot-udp
+      port: {{ .Values.ports.dot.port }}
+      targetPort: dot-udp
+      protocol: UDP
+    {{- end }}
+    {{- if .Values.ports.https.enabled }}
+    - name: https-tcp
+      port: {{ .Values.ports.https.port }}
+      targetPort: https-tcp
+      protocol: TCP
+    - name: https-udp
+      port: {{ .Values.ports.https.port }}
+      targetPort: https-udp
+      protocol: UDP
+    {{- end }}
+    {{- if .Values.ports.dnscrypt.enabled }}
+    - name: dnscrypt-tcp
+      port: {{ .Values.ports.dnscrypt.port }}
+      targetPort: dnscrypt-tcp
+      protocol: TCP
+    - name: dnscrypt-udp
+      port: {{ .Values.ports.dnscrypt.port }}
+      targetPort: dnscrypt-udp
+      protocol: UDP
+    {{- end }}
+    {{- if .Values.ports.dhcp.enabled }}
+    - name: dhcp-server
+      port: 67
+      targetPort: dhcp-server
+      protocol: UDP
+    - name: dhcp-client
+      port: 68
+      targetPort: dhcp-client
+      protocol: UDP
+    {{- end }}
+    {{- if .Values.ports.pprof.enabled }}
+    - name: pprof
+      port: {{ .Values.ports.pprof.port }}
+      targetPort: pprof
+      protocol: TCP
+    {{- end }}
+  selector:
+    {{- include "adguard-home.selectorLabels" . | nindent 4 }}
