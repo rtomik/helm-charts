@@ -1,5 +1,30 @@
 apiVersion: v1
 entries:
+  adguard-home:
+  - apiVersion: v2
+    appVersion: v0.107.79
+    created: "2026-09-15T09:37:32.394722217Z"
+    description: AdGuard Home helm chart for Kubernetes - Network-wide ad and tracker
+      blocking DNS server
+    digest: a595bbf65f5f8ea062dc56b3dcd3c817b35d6d0344344100afba1326e776d1f7
+    home: https://github.com/rtomik/helm-charts
+    keywords:
+    - dns
+    - ad-blocking
+    - dns-filtering
+    - adguard-home
+    - privacy
+    - network-security
+    maintainers:
+    - email: no@m.com
+      name: Richard Tomik
+    name: adguard-home
+    sources:
+    - https://github.com/AdguardTeam/AdGuardHome
+    type: application
+    urls:
+    - https://github.com/rtomik/helm-charts/releases/download/adguard-home-0.0.1/adguard-home-0.0.1.tgz
+    version: 0.0.1
   checkmk:
   - apiVersion: v2
     appVersion: 2.5.0p6
@@ -645,4 +670,4 @@ entries:
     urls:
     - https://github.com/rtomik/helm-charts/releases/download/tandoor-0.0.1/tandoor-0.0.1.tgz
     version: 0.0.1
-generated: "2026-08-20T13:32:16.275587543Z"
+generated: "2026-09-15T09:37:32.394784101Z"
